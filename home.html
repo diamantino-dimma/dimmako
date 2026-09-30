@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dimma | Início</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
+    <link rel="stylesheet" href="styles/home.css">
+</head>
+
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="brand"><img src="assets/dimako-icone-laranja.png" alt="Logotipo Dimma">
+                <div><strong>Dimmako</strong><small>conecte-se</small></div>
+            </div>
+            <div class="nav-title">Menu principal</div>
+            <nav class="nav" aria-label="Navegação principal">
+                <button class="active" data-view="inicio"><svg viewBox="0 0 24 24">
+                        <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" />
+                        <path d="M9 21v-7h6v7" />
+                    </svg><span>Início</span></button>
+                <button data-view="mapa"><svg viewBox="0 0 24 24">
+                        <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+                        <circle cx="12" cy="10" r="2.5" />
+                    </svg><span>Mapa</span></button>
+                <button data-view="notificacoes"><svg viewBox="0 0 24 24">
+                        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+                    </svg><span>Notificações</span></button>
+                <button data-view="vendas"><svg viewBox="0 0 24 24">
+                        <path d="M3 4h18l-2 8H7L5 4M7 12l-2 8h14l-2-8M9 16h6" />
+                    </svg><span>Vendas</span></button>
+                <button data-view="historico"><svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 2" />
+                    </svg><span>Histórico</span></button>
+                <button data-view="configuracoes"><svg viewBox="0 0 24 24">
+                        <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
+                        <path
+                            d="m19.4 15 .1.1a2 2 0 1 1-2.8 2.8l-.1-.1a2 2 0 0 0-3.4 1.4v.3a2 2 0 1 1-4 0v-.2a2 2 0 0 0-3.4-1.5l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A2 2 0 0 0 3.6 12H3.5a2 2 0 1 1 0-4h.2a2 2 0 0 0 1.5-3.4l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A2 2 0 0 0 11.4 3v-.2a2 2 0 1 1 4 0V3a2 2 0 0 0 3.4 1.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A2 2 0 0 0 20.9 11h.2a2 2 0 1 1 0 4h-.2a2 2 0 0 0-1.5 0Z" />
+                    </svg><span>Configurações</span></button>
+
+            </nav>
+            <div class="sidebar-bottom">
+                <div class="profile-mini">
+                    <div class="avatar-wrap">
+                        <div class="avatar" id="avatar">DM</div>
+                    </div>
+                    <div><strong id="userName">Visitante</strong><small id="userType">Sem sessão</small></div>
+                </div><button class="logout" id="btnSair">Sair da conta</button>
+            </div>
+        </aside>
+        <main class="main">
+            <header class="topbar">
+                <div class="mobile-header-row">
+                    <div class="mobile-brand"><img src="assets/dimako-icone-laranja.png" alt="Logo"
+                            style="width:28px;height:28px;max-width:28px;aspect-ratio:1/1;object-fit:contain;flex-shrink:0;vertical-align:middle;margin-right:6px;">Dimmako
+                    </div>
+                    <div class="mobile-account-bar">
+                        <div class="mobile-account-user">
+                            <div class="avatar" id="mobileAvatar">DM</div>
+                            <strong id="mobileUserName">Utilizador</strong>
+                        </div>
+                        <button class="mobile-notifications" type="button" aria-label="Notificações"><svg
+                                viewBox="0 0 24 24">
+                                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+                            </svg></button>
+                    </div>
+                </div>
+                <div class="search-area">
+                    <div class="search">
+                       <input id="postSearch" type="search" placeholder="Pesquisar usuários e publicações...">
+                    </div>
+                    <button class="publish-button" id="publishPost" type="button">Publicar</button>
+                </div>
+            </header>
+            <div class="content">
+                <section class="feed page-screen is-active" id="pageHome">
+                    <div class="section-heading">
+                        <span id="postCount">0 publicações</span>
+                    </div>
+                    <div class="filter-carousel" id="filterCarousel" aria-label="Filtrar publicações">
+                        <button class="filter-arrow" id="filterPrev" type="button" aria-label="Filtros anteriores"><svg
+                                viewBox="0 0 24 24">
+                                <path d="m15 18-6-6 6-6" />
+                            </svg></button>
+                        <div class="filter-track" id="filterTrack">
+                            <button class="active" data-category="Todos">Todos</button>
+                            <button data-category="Vestuários">Vestuários</button>
+                            <button data-category="Construção">Construção</button>
+                            <button data-category="Tecnologia">Tecnologia</button>
+                            <button data-category="Comidas">Comidas</button>
+                            <button data-category="Acessórios">Acessórios</button>
+                            <button data-category="Imobiliária">Imobiliária</button>
+                            <button data-category="Escola">Escola</button>
+                            <button data-category="Imóveis">Imóveis</button>
+                            <button data-category="Veículos">Veículos</button>
+                            <button data-category="Outro">Outro</button>
+                        </div>
+                        <button class="filter-arrow" id="filterNext" type="button" aria-label="Próximos filtros"><svg
+                                viewBox="0 0 24 24">
+                                <path d="m9 18 6-6-6-6" />
+                            </svg></button>
+                    </div>
+                    <div id="posts"></div>
+                </section>
+                <section id="telaMap" class="page-screen" aria-labelledby="mapTitle">
+                    <div class="screen-heading">
+                        <div>
+                            <h1 id="mapTitle">Explorar o mapa</h1>
+                            <p>Encontre vendedores e serviços perto de você.</p>
+                        </div>
+                    </div>
+                    <div class="map-toolbar">
+                        <label class="search"><svg viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="7" />
+                                <path d="m20 20-4-4" />
+                            </svg><input id="mapSearch" type="search" placeholder="Pesquisar cidade ou localidade..."
+                                autocomplete="off"></label>
+                        <p>Explorando Angola em 3D</p>
+                        <div class="map-pitch-controls">
+                            <button type="button" id="mapPitchDown" aria-label="Reduzir inclinação">Inclinar -</button>
+                            <button type="button" id="mapPitchUp" aria-label="Aumentar inclinação">Inclinar +</button>
+                            <button type="button" id="mapResetView" aria-label="Repor vista">Vista 3D</button>
+                        </div>
+                    </div>
+                    <div class="map-canvas" id="mapCanvas" role="application" aria-label="Mapa 3D interativo de Angola">
+                    </div>
+                    <p class="map-note">Mapa 3D MapLibre · Incline com dois dedos ou os controlos de pitch</p>
+                </section>
+
+                <section id="pageNotifications" class="page-screen" aria-labelledby="notificationsTitle">
+                    <div class="screen-heading">
+                        <div>
+                            <h1 id="notificationsTitle">Notificações</h1>
+                            <p>Acompanhe as novidades da sua conta.</p>
+                        </div>
+                        <button class="screen-action" id="markNotificationsRead" type="button" disabled>Marcar todas
+                            como
+                            lidas</button>
+                    </div>
+                    <div class="notification-list" id="notificationList">
+                        <div class="empty">Você ainda não tem notificações.</div>
+                    </div>
+                </section>
+
+                <section id="pageVendas" class="page-screen" aria-labelledby="salesTitle">
+                    <div class="screen-heading">
+                        <div>
+                            <h1 id="salesTitle">Visão geral das vendas</h1>
+                            <p>Desempenho e histórico dos seus pedidos.</p>
+                        </div>
+                    </div>
+                    <div class="sales-toolbar">
+                        <div class="period-switch" role="group" aria-label="Período do dashboard">
+                            <button class="active" type="button" data-period="day">Dia</button><button type="button"
+                                data-period="week">Semana</button><button type="button"
+                                data-period="month">Mês</button><button type="button" data-period="year">Ano</button>
+                        </div>
+                        <span class="sales-period-label" id="salesPeriodLabel">Hoje</span>
+                    </div>
+                    <div class="sales-stats">
+                        <article class="sales-stat"><span>Receita bruta</span><strong id="salesRevenue">Kz
+                                0</strong><small>Vendas concluídas</small></article>
+                        <article class="sales-stat"><span>Pedidos</span><strong id="salesOrders">0</strong><small>no
+                                período</small></article>
+                        <article class="sales-stat"><span>Valor médio</span><strong id="salesAverage">Kz
+                                0</strong><small>Por pedido concluído</small></article>
+                        <article class="sales-stat"><span>Em processamento</span><strong
+                                id="salesPending">0</strong><small style="color:var(--muted)">Aguardam
+                                confirmação</small></article>
+                    </div>
+                    <section class="chart-section" aria-labelledby="salesChartTitle">
+                        <div class="subsection-heading">
+                            <h2 id="salesChartTitle">Vendas no período</h2><span id="chartTotal">0 pedidos</span>
+                        </div>
+                        <div class="sales-chart" id="salesChart" role="img" aria-label="Gráfico de vendas"></div>
+                    </section>
+                    <section class="history-section" aria-labelledby="salesHistoryTitle">
+                        <div class="subsection-heading">
+                            <h2 id="salesHistoryTitle">Vendas recentes</h2><span>Dados da sua conta</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="sales-table">
+                                <thead>
+                                    <tr>
+                                        <th>Pedido</th>
+                                        <th>Cliente</th>
+                                        <th>Data</th>
+                                        <th>Valor</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesHistoryRows">
+                                    <tr>
+                                        <td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">
+                                            Nenhuma venda registrada ainda.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </section>
+
+                <section id="pageHistorico" class="page-screen" aria-labelledby="historyTitle">
+                    <div class="screen-heading">
+                        <div>
+                            <h1 id="historyTitle">Histórico de Vendas</h1>
+                            <p>Consulte todos os pedidos e o histórico completo de vendas da sua conta.</p>
+                        </div>
+                    </div>
+                    <div class="sales-toolbar">
+                        <div class="history-filters" role="group" aria-label="Filtro do histórico">
+                            <button class="active" type="button" data-history-filter="todos">Todos</button>
+                            <button type="button" data-history-filter="concluido">Concluídos</button>
+                            <button type="button" data-history-filter="pendente">Pendentes</button>
+                            <button type="button" data-history-filter="cancelado">Cancelados</button>
+                        </div>
+                        <span class="sales-period-label" id="historyCountLabel">0 pedidos</span>
+                    </div>
+                    <div class="sales-stats">
+                        <article class="sales-stat"><span>Total faturado</span><strong id="historyTotalRevenue">Kz
+                                0</strong><small>Vendas concluídas</small></article>
+                        <article class="sales-stat"><span>Pedidos totais</span><strong
+                                id="historyOrdersCount">0</strong><small>no
+                                histórico</small></article>
+                        <article class="sales-stat"><span>Concluídos</span><strong
+                                id="historyCompletedCount">0</strong><small>Finalizados</small></article>
+                        <article class="sales-stat"><span>Pendentes</span><strong
+                                id="historyPendingCount">0</strong><small style="color:var(--muted)">Aguardam
+                                confirmação</small></article>
+                    </div>
+                    <div class="history-section">
+                        <div class="subsection-heading">
+                            <h2>Todos os pedidos</h2>
+                            <div class="history-search-wrap">
+                                <input type="search" id="historySearch" placeholder="Pesquisar pedido ou cliente..."
+                                    aria-label="Pesquisar histórico">
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="sales-table">
+                                <thead>
+                                    <tr>
+                                        <th>Pedido</th>
+                                        <th>Cliente</th>
+                                        <th>Data</th>
+                                        <th>Valor</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyRows">
+                                    <tr>
+                                        <td colspan="5" style="text-align:center;padding:28px 16px;color:var(--muted)">
+                                            Nenhuma venda registrada ainda no seu histórico.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="pageConfiguracoes" class="page-screen" aria-labelledby="settingsTitle">
+                    <div class="screen-heading">
+                        <div>
+                            <h1 id="settingsTitle">Configurações</h1>
+                            <p>Gerencie suas preferências, privacidade e a segurança da conta.</p>
+                        </div>
+                    </div>
+                    <div class="settings-list">
+                        <div class="settings-section-title">Aparência</div>
+                        <label class="setting-row">
+                            <div>
+                                <strong>Modo Escuro</strong>
+                                <p>Alternar entre o tema claro e o tema escuro na plataforma.</p>
+                            </div>
+                            <span class="switch">
+                                <input type="checkbox" id="themeSwitch">
+                                <span class="slider"></span>
+                            </span>
+                        </label>
+
+                        <div class="settings-section-title">Notificações</div>
+                        <label class="setting-row">
+                            <div>
+                                <strong>Notificações de pedidos</strong>
+                                <p>Receba alertas sobre novos pedidos e pagamentos.</p>
+                            </div>
+                            <span class="switch">
+                                <input type="checkbox" data-setting="orderNotifications" checked>
+                                <span class="slider"></span>
+                            </span>
+                        </label>
+                        <label class="setting-row">
+                            <div>
+                                <strong>Notificações de mensagens</strong>
+                                <p>Seja avisado quando receber uma mensagem.</p>
+                            </div>
+                            <span class="switch">
+                                <input type="checkbox" data-setting="messageNotifications" checked>
+                                <span class="slider"></span>
+                            </span>
+                        </label>
+
+                        <div class="settings-section-title">Privacidade</div>
+                        <label class="setting-row">
+                            <div>
+                                <strong>Perfil público</strong>
+                                <p>Qualquer pessoa pode ver o seu perfil</p>
+                            </div>
+                            <span class="switch">
+                                <input type="checkbox" data-setting="publicProfile" checked>
+                                <span class="slider"></span>
+                            </span>
+                        </label>
+                        <label class="setting-row">
+                            <div>
+                                <strong>Aparecer no mapa</strong>
+                                <p>Mostrar a sua localização aproximada</p>
+                            </div>
+                            <span class="switch">
+                                <input type="checkbox" data-setting="showOnMap" checked>
+                                <span class="slider"></span>
+                            </span>
+                        </label>
+                        <label class="setting-row">
+                            <div>
+                                <strong>Mostrar disponibilidade online</strong>
+                                <p>Seus contatos poderão ver quando você estiver online.</p>
+                            </div>
+                            <span class="switch">
+                                <input type="checkbox" data-setting="showOnline" checked>
+                                <span class="slider"></span>
+                            </span>
+                        </label>
+                    </div>
+                    <button class="screen-action" id="saveSettings" type="button" style="margin-top:20px">Guardar
+                        preferências</button><span id="settingsFeedback" role="status"
+                        style="color:#36805d;font-size:12px;margin-left:12px"></span>
+                    <br><br><br><br>
+                </section>
+
+                <section id="pagePerfil" class="page-screen" aria-labelledby="profileTitle">
+                    <div class="screen-heading">
+                        <div>
+                            <h1 id="profileTitle">Meu perfil</h1>
+                            <p>Informações da sua conta Dimma.</p>
+                        </div>
+                    </div>
+                    <div class="profile-summary">
+                        <div class="avatar" id="profileAvatar">UD</div>
+                        <div><strong id="profileName">Utilizador Dimma</strong>
+                            <p id="profileType">Membro Dimma</p>
+                            <button class="profile-photo-btn" id="btnFotoPerfil" type="button">Alterar foto de
+                                perfil</button>
+                            <input type="file" id="profilePhotoInput" accept="image/*" hidden>
+                        </div>
+                    </div>
+                    <div class="form-field"><label for="profileNameInput">Nome</label><input id="profileNameInput"
+                            type="text" placeholder="Seu nome"></div>
+                    <div class="form-field"><label for="profileEmailInput">Email ou telefone</label><input
+                            id="profileEmailInput" type="text" readonly></div>
+                    <div class="form-field" id="profileCompanyField" style="display: none;"><label
+                            for="profileCompanyInput">Empresa / Negócio</label><input id="profileCompanyInput"
+                            type="text" readonly></div>
+                    <div class="form-field" id="profileBioField" style="display: none;"><label
+                            for="profileBioInput">Sobre o negócio</label><textarea id="profileBioInput" rows="3"
+                            readonly
+                            style="width:100%;border-radius:10px;border:1px solid var(--line);padding:10px;font-family:inherit;resize:none;background:#fdfcfb;color:inherit;"></textarea>
+                    </div>
+                    <button class="screen-action" id="saveProfile" type="button">Guardar perfil</button>
+                    <button class="screen-action" id="profileSettings" type="button"
+                        style="background:transparent;border:1px solid var(--line);color:var(--dark);margin-left:8px">Abrir
+                        configurações</button>
+                    <br><br><br><br>
+                </section>
+
+
+                <aside class="chat-panel">
+                    <button class="mobile-chat-close" id="mobileChatClose" type="button" aria-label="Fechar chat"><svg
+                            viewBox="0 0 24 24">
+                            <path d="m15 18-6-6 6-6" />
+                            <path d="M9 12h11" />
+                        </svg></button>
+                    <div class="friends-view" id="friendsView">
+                        <div class="chat-header">
+                            <h2>Seus amigos</h2>
+                            <p>Converse com quem está online</p>
+                        </div>
+                        <input class="friend-search" id="friendSearch" placeholder="Buscar amigo..."
+                            aria-label="Buscar amigo">
+                        <div class="friends" id="friends"></div>
+                    </div>
+                    <div class="conversation" id="conversation">
+                        <div class="conversation-title">
+                            <button class="chat-back" id="chatBack" type="button"
+                                aria-label="Voltar para amigos">‹</button>
+                            <div class="avatar" id="chatAvatar">--</div><strong id="chatName">Selecione um
+                                amigo</strong>
+                        </div>
+                        <div class="messages" id="messages"></div>
+                        <form class="message-form" id="messageForm"><input id="messageInput"
+                                placeholder="Escreva uma mensagem..." autocomplete="off"><button class="send"
+                                type="submit">Enviar</button></form>
+                    </div>
+                </aside>
+            </div>
+        </main>
+        <button class="mobile-floating-publish" id="mobilePublish" type="button" aria-label="Publicar">
+            <strong>+</strong><span>Publicar</span>
+        </button>
+        <nav class="mobile-nav" aria-label="Navegação mobile">
+            <button class="active" data-mobile-view="inicio"><svg viewBox="0 0 24 24">
+                    <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" />
+                    <path d="M9 21v-7h6v7" />
+                </svg><span>Início</span></button>
+            <button data-mobile-view="mapa"><svg viewBox="0 0 24 24">
+                    <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+                    <circle cx="12" cy="10" r="2.5" />
+                </svg><span>Mapa</span></button>
+            <button data-mobile-view="chat" id="mobileChat"><svg viewBox="0 0 24 24">
+                    <path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.9 8.9 0 0 1-3.4-.7L3 20l1-4.6a8.4 8.4 0 1 1 17-3.9Z" />
+                </svg><span>Chat</span></button>
+            <button data-mobile-view="vendas"><svg viewBox="0 0 24 24">
+                    <path d="M3 4h18l-2 8H7L5 4M7 12l-2 8h14l-2-8M9 16h6" />
+                </svg><span>Vendas</span></button>
+            <button data-mobile-view="historico"><svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 2" />
+                </svg><span>Histórico</span></button>
+        </nav>
+    </div>
+    <div class="publish-modal" id="publishModal" aria-hidden="true">
+        <section class="publish-dialog" role="dialog" aria-modal="true" aria-labelledby="publishTitle">
+            <header class="publish-dialog-header">
+                <h2 id="publishTitle">Publicar produto</h2>
+                <button class="modal-close" id="closePublishModal" type="button" aria-label="Fechar formulário"><svg
+                        viewBox="0 0 24 24">
+                        <path d="m18 6-12 12M6 6l12 12" />
+                    </svg></button>
+            </header>
+            <form class="product-form" id="productForm">
+                <div class="media-upload-grid" aria-label="Mídias do produto, até quatro arquivos">
+                    <div class="media-upload-card" data-media-slot="0"><label class="media-upload-trigger"
+                            for="productMedia0"><svg viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="16" rx="2" />
+                                <circle cx="8.5" cy="9" r="1.5" />
+                                <path d="m5 18 5-5 3 3 2-2 4 4" />
+                                <path d="m15 6 5 3-5 3z" />
+                            </svg><span>Imagem ou vídeo</span><input id="productMedia0" data-media-input="0" type="file"
+                                accept="image/*,video/*" aria-label="Selecionar primeira imagem ou vídeo"></label>
+                        <div class="media-preview" data-media-preview="0" hidden></div><button class="media-remove"
+                            data-remove-media="0" type="button" aria-label="Remover primeira mídia"><svg
+                                viewBox="0 0 24 24">
+                                <path d="M5 5l14 14M19 5 5 19" />
+                            </svg></button>
+                    </div>
+                    <div class="media-upload-card" data-media-slot="1"><label class="media-upload-trigger"
+                            for="productMedia1"><svg viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="16" rx="2" />
+                                <circle cx="8.5" cy="9" r="1.5" />
+                                <path d="m5 18 5-5 3 3 2-2 4 4" />
+                                <path d="m15 6 5 3-5 3z" />
+                            </svg><span>Imagem ou vídeo</span><input id="productMedia1" data-media-input="1" type="file"
+                                accept="image/*,video/*" aria-label="Selecionar segunda imagem ou vídeo"></label>
+                        <div class="media-preview" data-media-preview="1" hidden></div><button class="media-remove"
+                            data-remove-media="1" type="button" aria-label="Remover segunda mídia"><svg
+                                viewBox="0 0 24 24">
+                                <path d="M5 5l14 14M19 5 5 19" />
+                            </svg></button>
+                    </div>
+                    <div class="media-upload-card" data-media-slot="2"><label class="media-upload-trigger"
+                            for="productMedia2"><svg viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="16" rx="2" />
+                                <circle cx="8.5" cy="9" r="1.5" />
+                                <path d="m5 18 5-5 3 3 2-2 4 4" />
+                                <path d="m15 6 5 3-5 3z" />
+                            </svg><span>Imagem ou vídeo</span><input id="productMedia2" data-media-input="2" type="file"
+                                accept="image/*,video/*" aria-label="Selecionar terceira imagem ou vídeo"></label>
+                        <div class="media-preview" data-media-preview="2" hidden></div><button class="media-remove"
+                            data-remove-media="2" type="button" aria-label="Remover terceira mídia"><svg
+                                viewBox="0 0 24 24">
+                                <path d="M5 5l14 14M19 5 5 19" />
+                            </svg></button>
+                    </div>
+                    <div class="media-upload-card" data-media-slot="3"><label class="media-upload-trigger"
+                            for="productMedia3"><svg viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="16" rx="2" />
+                                <circle cx="8.5" cy="9" r="1.5" />
+                                <path d="m5 18 5-5 3 3 2-2 4 4" />
+                                <path d="m15 6 5 3-5 3z" />
+                            </svg><span>Imagem ou vídeo</span><input id="productMedia3" data-media-input="3" type="file"
+                                accept="image/*,video/*" aria-label="Selecionar quarta imagem ou vídeo"></label>
+                        <div class="media-preview" data-media-preview="3" hidden></div><button class="media-remove"
+                            data-remove-media="3" type="button" aria-label="Remover quarta mídia"><svg
+                                viewBox="0 0 24 24">
+                                <path d="M5 5l14 14M19 5 5 19" />
+                            </svg></button>
+                    </div>
+                </div>
+                <div class="product-fields-grid">
+                    <div class="form-field"><label for="productName">Nome do produto</label><input id="productName"
+                            name="productName" type="text" maxlength="100" placeholder="Ex.: Vestido estampado"
+                            required></div>
+                    <div class="form-field"><label for="productPrice">Preço (Kz)</label><input id="productPrice"
+                            name="productPrice" type="number" min="1" step="1" inputmode="numeric"
+                            placeholder="Ex.: 25000" required></div>
+                </div>
+                <div class="form-field"><label for="productCategory">Categoria</label><select id="productCategory"
+                        name="productCategory" required>
+                        <option value="">Selecione uma categoria</option>
+                        <option>Vestuários</option>
+                        <option>Construção</option>
+                        <option>Tecnologia</option>
+                        <option>Comidas</option>
+                        <option>Acessórios</option>
+                        <option>Imobiliária</option>
+                        <option>Escola</option>
+                        <option>Imóveis</option>
+                        <option>Veículos</option>
+                        <option>Outro</option>
+                    </select></div>
+                <div class="form-field"><label for="productDescription">Descrição do produto</label><textarea
+                        id="productDescription" name="productDescription" maxlength="1200"
+                        placeholder="Descreva características, estado e detalhes importantes..." required></textarea>
+                </div>
+                <fieldset class="delivery-fieldset">
+                    <legend>Preços de entrega</legend>
+                    <p class="delivery-hint">Defina o valor da entrega em cada zona. Os valores podem ser diferentes
+                        para cada produto.</p>
+                    <div class="delivery-rates-form">
+                        <div class="form-field"><label for="deliveryMunicipality">Dentro do município (Kz)</label><input
+                                id="deliveryMunicipality" type="number" min="0" step="1" inputmode="numeric"
+                                placeholder="1000" required></div>
+                        <div class="form-field"><label for="deliveryOutsideMunicipality">Fora do município
+                                (Kz)</label><input id="deliveryOutsideMunicipality" type="number" min="0" step="1"
+                                inputmode="numeric" placeholder="2000" required></div>
+                        <div class="form-field"><label for="deliveryOutsideLuanda">Fora de Luanda (Kz)</label><input
+                                id="deliveryOutsideLuanda" type="number" min="0" step="1" inputmode="numeric"
+                                placeholder="4000" required></div>
+                    </div>
+                </fieldset>
+                <p class="publish-feedback" id="publishFeedback" role="status" aria-live="polite"></p>
+                <footer class="product-form-footer"><button class="product-cancel" id="cancelPublish"
+                        type="button">Cancelar</button><button class="screen-action product-submit" id="confirmPublish"
+                        type="submit" disabled>Publicar produto</button></footer>
+            </form>
+        </section>
+    </div>
+
+    <div class="publish-modal" id="buyModal" aria-hidden="true">
+        <section class="publish-dialog" role="dialog" aria-modal="true" aria-labelledby="buyModalTitle"
+            style="max-width: 480px">
+            <header class="publish-dialog-header">
+                <h2 id="buyModalTitle">Comprar produto</h2>
+                <button class="modal-close" id="closeBuyModal" type="button" aria-label="Fechar compra"><svg
+                        viewBox="0 0 24 24">
+                        <path d="m18 6-12 12M6 6l12 12" />
+                    </svg></button>
+            </header>
+            <form class="product-form" id="buyForm">
+                <div class="buy-summary-box">
+                    <div class="buy-product-title" id="buyProductTitle">Nome do produto</div>
+                    <div class="buy-seller-info">Vendedor: <strong id="buySellerName">Vendedor</strong></div>
+                    <div class="buy-price-row">
+                        <span>Preço unitário:</span>
+                        <strong id="buyProductPrice">Kz 0</strong>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="buyDeliveryZone">Zona de entrega</label>
+                    <select id="buyDeliveryZone" required>
+                        <option value="municipality">Dentro do município</option>
+                        <option value="outsideMunicipality">Fora do município</option>
+                        <option value="outsideLuanda">Fora de Luanda</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label for="buyCustomerName">Seu nome completo</label>
+                    <input id="buyCustomerName" type="text" placeholder="Ex.: Manuel António" required>
+                </div>
+
+                <div class="form-field">
+                    <label for="buyCustomerPhone">Telefone ou WhatsApp</label>
+                    <input id="buyCustomerPhone" type="tel" placeholder="Ex.: 923 000 000" required>
+                </div>
+
+                <div class="form-field">
+                    <label for="buyDeliveryAddress">Endereço de entrega</label>
+                    <textarea id="buyDeliveryAddress" placeholder="Bairro, rua, ponto de referência..." rows="2"
+                        required></textarea>
+                </div>
+
+                <div class="buy-total-box">
+                    <div>
+                        <span>Taxa de entrega: <strong id="buyDeliveryRate">Kz 0</strong></span>
+                    </div>
+                    <div class="buy-grand-total">
+                        <span>Total a pagar:</span>
+                        <strong id="buyGrandTotal">Kz 0</strong>
+                    </div>
+                </div>
+
+                <p class="publish-feedback" id="buyFeedback" role="status" aria-live="polite"></p>
+
+                <footer class="product-form-footer">
+                    <button class="product-cancel" id="cancelBuyModal" type="button">Cancelar</button>
+                    <button class="screen-action product-submit" id="confirmBuyButton" type="submit">Confirmar
+                        Compra</button>
+                </footer>
+            </form>
+        </section>
+    </div>
+
+    <!-- Modal para Adicionar Novo Amigo via Chat / Botão Mobile -->
+    <div class="publish-modal" id="addFriendModal" aria-hidden="true">
+        <section class="publish-dialog" role="dialog" aria-modal="true" aria-labelledby="addFriendModalTitle"
+            style="max-width: 480px">
+            <header class="publish-dialog-header">
+                <h2 id="addFriendModalTitle" style="display:flex;align-items:center;gap:8px;">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="8.5" cy="7" r="4"></circle>
+                        <line x1="20" y1="8" x2="20" y2="14"></line>
+                        <line x1="23" y1="11" x2="17" y2="11"></line>
+                    </svg>
+                    Adicionar Amigo
+                </h2>
+                <button class="modal-close" id="closeAddFriendModal" type="button" aria-label="Fechar modal">
+                    <svg viewBox="0 0 24 24">
+                        <path d="m18 6-12 12M6 6l12 12" />
+                    </svg>
+                </button>
+            </header>
+            <div style="padding: 16px 20px 8px;">
+                <div class="chat-search" style="margin: 0; width: 100%;">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="7" />
+                        <path d="m20 20-3.5-3.5" />
+                    </svg>
+                    <input type="text" id="addFriendSearchInput"
+                        placeholder="Pesquisar por nome de utilizador ou empresa..." autocomplete="off">
+                </div>
+            </div>
+            <div id="addFriendList"
+                style="max-height: 380px; overflow-y: auto; padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 10px;">
+                <!-- Resultados de amigos e empresas -->
+            </div>
+        </section>
+    </div>
+
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <script src="src/js/app.js"></script>
+</body>
+
+</html>

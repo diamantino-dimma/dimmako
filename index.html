@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dimako</title>
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+
+<body>
+    <div class="divLeftImg">
+        <img src="assets/image2.png" alt="" srcset="">
+        <div class="boxText">
+            <h1>Descobre, partilhe e venda o seu produto por toda parte de Angola</h1>
+        </div>
+    </div>
+    <div class="spaceWallForms">
+        <div class="headerForms">
+            <img src="assets/dimako-icone-laranja.png" alt="Logótipo Dimmako">
+            <h2>Dimmako</h2>
+            <button type="button" id="btnEntrar" onclick="abrirLogin()">Entrar</button>
+        </div>
+        <div class="espacoOptionAuth" id="espacoOptionAuth">
+            <h2 style="margin: 0; color: rgb(222, 103, 6); font-family:'Bauhaus 93' ; font-weight: 400;">Faça parte do
+                melhor mercado digital </h2>
+            <div class="spacesCardsBtnsServices">
+                <button type="button" title="Continuar com Google" onclick="continuarComProvedor('Google')">
+                    <svg viewBox="0 0 48 48" width="24" height="24">
+                        <path fill="#FFC107"
+                            d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z" />
+                        <path fill="#FF3D00"
+                            d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 16.1 4 9.2 8.3 6.3 14.7z" />
+                        <path fill="#4CAF50"
+                            d="M24 44c5.3 0 10.2-2 13.8-5.4l-6.4-5.2C29.3 35.1 26.8 36 24 36c-5.3 0-9.8-3.4-11.4-8.1l-6.5 5C9.1 39.6 16 44 24 44z" />
+                        <path fill="#1976D2"
+                            d="M43.6 20.5H42V20H24v8h11.3c-.7 2-2 3.7-3.7 4.9l6.4 5.2C39.9 36.5 44 30.9 44 24c0-1.2-.1-2.3-.4-3.5z" />
+                    </svg>
+                </button>
+                <button type="button" title="Continuar com Facebook" onclick="continuarComProvedor('Facebook')">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="#1877F2"
+                            d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.96h-1.51c-1.49 0-1.95.93-1.95 1.89v2.26h3.32l-.53 3.49h-2.79V24C19.61 23.09 24 18.1 24 12.07z" />
+                    </svg>
+                </button>
+                <button type="button" title="Continuar com Email" onclick="continuarComProvedor('Email')">
+                    <svg viewBox="0 0 24 24" width="22" height="22">
+                        <path fill="rgb(222,103,6)"
+                            d="M2 4h20c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H2c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 2v.01L12 13 22 6.01V6H2zm0 12h20V8.24l-10 6.51-10-6.51V18z" />
+                    </svg>
+                </button>
+                <button type="button" title="Continuar com Apple" onclick="continuarComProvedor('Apple')">
+                    <svg viewBox="0 0 24 24" width="22" height="22">
+                        <path fill="#000"
+                            d="M16.365 1.43c0 1.14-.468 2.203-1.213 2.99-.83.86-2.18 1.53-3.28 1.44-.14-1.1.42-2.24 1.17-3.02.83-.87 2.28-1.52 3.32-1.41zm4.36 16.6c-.33.76-.73 1.47-1.2 2.14-.65.94-1.18 1.6-1.6 1.97-.63.6-1.31.91-2.03.92-.52 0-1.15-.15-1.87-.46-.72-.31-1.38-.46-1.99-.46-.64 0-1.32.15-2.05.46-.73.31-1.32.47-1.78.49-.7.03-1.4-.29-2.09-.95-.44-.39-.99-1.07-1.66-2.03-.72-1.03-1.31-2.23-1.78-3.6-.5-1.48-.75-2.91-.75-4.29 0-1.58.34-2.94 1.02-4.08.53-.92 1.24-1.64 2.12-2.18.88-.53 1.83-.81 2.86-.82.55 0 1.27.17 2.17.5.9.34 1.48.51 1.73.51.19 0 .83-.2 1.92-.6 1.03-.37 1.9-.52 2.6-.47 1.92.16 3.36.91 4.32 2.27-1.72 1.04-2.57 2.5-2.55 4.38.02 1.46.55 2.68 1.58 3.64.47.45 1 .8 1.58 1.05-.13.37-.27.72-.42 1.06z" />
+                    </svg>
+                </button>
+            </div>
+            <span class="separadorOu">ou</span>
+            <div class="divEmailcotinue">
+
+                <input type="email" name="" id="email" placeholder="Email ou telefone">
+                <label for="email" class="hintCampo">Introduza um e-mail ou telefone válido</label>
+                <button type="button" onclick="confirmarEmail()">
+                    Confirmar
+                </button>
+                <p style="text-align: center; color: gray; font-size: 13px; line-height: 1.4;">
+                    Ao confirmar, concorda com os nossos <a href="#"
+                        style="text-decoration: none; color: #de6706;">Termos e Política de Privacidade</a>
+                </p>
+            </div>
+        </div>
+
+        <div id="switchTypeUser" style="display: none;">
+            <div id="passoCreateAccount">
+                <div id="passo1" style="background: #f2b888; color: rgb(222, 112, 33); font-weight: bold;">1</div>
+                <div id="passo2" style="background: #f2b888; color: rgb(222, 112, 33); font-weight: bold;">2</div>
+                <div id="passo3" style="background: #f2b888; color: rgb(222, 112, 33); font-weight: bold;">3</div>
+                <div id="passo4" style="background: #f2b888; color: rgb(222, 112, 33); font-weight: bold;">4</div>
+            </div>
+            <div id="divPasso1">
+                <h2
+                    style="text-align: center; color: rgb(222, 103, 6); font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif ;">
+                    Bem-vindo à Dimmako! Como pretende utilizar a plataforma?</h2>
+                <div class="espacoBtnTypeUser">
+                    <button type="button" onclick="irParaPasso('divPasso1', 'divPasso2', 'passo1', 'passo2')">Tornar-se
+                        um vendedor</button>
+                    <button type="button" class="btnSecundario" onclick="irParaCliente()">Tornar-se
+                        um cliente</button>
+                </div>
+            </div>
+
+            <div id="divPasso2" style="display: none;">
+                <span class="linkVoltar" onclick="voltarPasso('divPasso2', 'divPasso1', 'passo1')">‹ Voltar</span>
+                <h2>Dados Pessoais</h2>
+                <form action="" id="formVendedor">
+                    <input type="text" id="nomeCompletoVendedor" placeholder="Nome Completo">
+
+                    <div class="dataEspace">
+                        <label for="dia">Deve ter pelo menos 18 anos de idade.</label>
+                        <div>
+                            <select name="" id="dia">
+                                <option value="">01</option>
+                            </select>
+                            <select name="" id="mes">
+                                <option value="">Junho</option>
+                            </select>
+                            <select name="" id="ano">
+                                <option value="">2008</option>
+                            </select>
+                        </div>
+                    </div>
+                    <input type="text" id="paisVendedor" placeholder="País">
+                    <select name="" id="sexoVendedor">
+                        <option value="">Sexo</option>
+                    </select>
+
+                    <input type="text" id="biVendedor" placeholder="BI Número">
+                    <input type="password" id="senhaVendedor" placeholder="Senha">
+                    <div class="password-requirements" id="req_senhaVendedor">
+                        <span class="req-item" data-req="num">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="9"></circle>
+                            </svg>
+                            Números 1 e 9
+                        </span>
+                        <span class="req-item" data-req="let">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="9"></circle>
+                            </svg>
+                            Letras A,Z e a,z
+                        </span>
+                        <span class="req-item" data-req="esp">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="9"></circle>
+                            </svg>
+                            Carateres #$&/)€{[{]}];
+                        </span>
+                        <span class="req-item" data-req="len">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="9"></circle>
+                            </svg>
+                            Caracteres 8
+                        </span>
+                    </div>
+                    <input type="password" id="confirmarSenhaVendedor" placeholder="Confirmar senha">
+                    <button type="button" onclick="avancarPasso2Vendedor()">Continuar</button>
+                </form>
+            </div>
+            <div id="divPasso3" style="display: none;">
+                <span class="linkVoltar" onclick="voltarPasso('divPasso3', 'divPasso2', 'passo2')">‹ Voltar</span>
+                <h2>Dados do Negócio</h2>
+                <form action="" id="formVendedor1">
+                    <input type="text" id="nomeEmpresa" placeholder="Nome da Empresa">
+                    <input type="email" id="emailEmpresa" placeholder="Email">
+                    <input type="tel" id="telefoneEmpresa" placeholder="Telefone">
+                    <div class="blocoCampo">
+                        <label for="">Escolha a categoria do seu negócio</label>
+                        <div class="espacoCategoeias" id="categoriasNegocio">
+                            <button type="button" onclick="selecionarUnico(this)">Vestuários</button>
+                            <button type="button" onclick="selecionarUnico(this)">Construção</button>
+                            <button type="button" onclick="selecionarUnico(this)">Tecnologia</button>
+                            <button type="button" onclick="selecionarUnico(this)">Comidas</button>
+                            <button type="button" onclick="selecionarUnico(this)">Acessórios</button>
+                            <button type="button" onclick="selecionarUnico(this)">Imobiliária</button>
+                            <button type="button" onclick="selecionarUnico(this)">Imóveis</button>
+                            <button type="button" onclick="selecionarUnico(this)">Outro</button>
+
+                        </div>
+                    </div>
+                    <button type="button" onclick="avancarPasso3Vendedor()">Continuar</button>
+
+                </form>
+
+
+
+
+            </div>
+
+            <div id="divPasso4" style="display: none;">
+                <span class="linkVoltar" onclick="voltarPasso('divPasso4', 'divPasso3', 'passo3')">‹ Voltar</span>
+                <form action="" id="formVendedor3">
+                    <label class="avatarUpload" for="logotipoEmpresa">
+                        <div class="divShowAvatarUser" id="previewLogotipoEmpresa">
+                            <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#de6706"
+                                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                <circle cx="12" cy="13" r="4" />
+                            </svg>
+                        </div>
+                        <span class="iconeCamera">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path fill="#fff"
+                                    d="M9 3l-1.8 2H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.2L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                            </svg>
+                        </span>
+                        <input type="file" id="logotipoEmpresa" accept="image/*"
+                            onchange="mostrarPreview('logotipoEmpresa', 'previewLogotipoEmpresa')">
+                    </label>
+                    <span class="labelAvatar">Adicione o logótipo da sua empresa</span>
+
+                    <div class="blocoCampo">
+                        <label for="">Selecione as formas de pagamento aceites</label>
+                        <div class="espacoCategoeias" id="formasPay">
+                            <button type="button" title="Multicaixa Express" onclick="alternarSeleccao(this)">
+                                <img src="assets/multicaixaExpress.png" alt="Multicaixa Express">
+                            </button>
+                            <button type="button" title="Transferência Bancária" onclick="alternarSeleccao(this)">
+                                <img src="assets/transafrenciaBancaria.jpeg" alt="Transferência Bancária">
+                            </button>
+                            <button type="button" title="Visa" onclick="alternarSeleccao(this)">
+                                <img src="assets/visa.png" alt="Visa">
+                            </button>
+                        </div>
+                    </div>
+                    <textarea placeholder="Fale um pouco sobre a sua empresa" id="descriptionBus"></textarea>
+                    <button type="button" onclick="finalizarCadastroVendedor()">Concluir cadastro</button>
+
+                </form>
+
+            </div>
+
+            <!-- Fluxo de Cliente -->
+            <div id="divCliente1" style="display: none;">
+                <span class="linkVoltar" onclick="voltarPasso('divCliente1', 'divPasso1', null)">‹ Voltar</span>
+                <h2>Vamos criar o seu perfil</h2>
+                <form action="" id="formCliente" onsubmit="return false;">
+                    <label class="avatarUpload" for="fotoPerfilCliente">
+                        <div class="divShowAvatarUser" id="previewFotoCliente">
+                            <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#de6706"
+                                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                        </div>
+                        <span class="iconeCamera">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path fill="#fff"
+                                    d="M9 3l-1.8 2H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.2L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                            </svg>
+                        </span>
+                        <input type="file" id="fotoPerfilCliente" accept="image/*"
+                            onchange="mostrarPreview('fotoPerfilCliente', 'previewFotoCliente')">
+                    </label>
+                    <span class="labelAvatar">Adicione a sua foto de perfil (opcional)</span>
+                    <input type="text" id="nomeCliente" placeholder="Nome Completo">
+                    <input type="email" id="emailCliente" placeholder="Email ou telefone">
+                    <input type="password" id="senhaCliente" placeholder="Senha">
+                    <div class="password-requirements" id="req_senhaCliente">
+                        <span class="req-item" data-req="num">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="9"></circle>
+                            </svg>
+                            Números 1 e 9
+                        </span>
+                        <span class="req-item" data-req="let">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="9"></circle>
+                            </svg>
+                            Letras A,Z e a,z
+                        </span>
+                        <span class="req-item" data-req="esp">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="9"></circle>
+                            </svg>
+                            Carateres #$&/)€{[{]}];
+                        </span>
+                        <span class="req-item" data-req="len">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="9"></circle>
+                            </svg>
+                            Caracteres 8
+                        </span>
+                    </div>
+                    <input type="password" id="confirmarSenhaCliente" placeholder="Confirmar senha">
+                    <button type="button" onclick="cadastrarCliente()">Cadastrar</button>
+                </form>
+            </div>
+
+            <div id="divCliente2" style="display: none;">
+                <span class="linkVoltar" onclick="voltarPasso('divCliente2', 'divCliente1', null)">‹ Voltar</span>
+                <h2>Perfil criado com sucesso! Escolha como pretende continuar</h2>
+                <p class="hintCampo" style="text-align:center;">Escolha uma opção abaixo para importarmos
+                    automaticamente
+                    o seu nome, foto e contacto</p>
+                <div class="spacesCardsBtnsServices">
+                    <button type="button" title="Continuar com Google" onclick="continuarComProvedor('Google')">
+                        <svg viewBox="0 0 48 48" width="24" height="24">
+                            <path fill="#FFC107"
+                                d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z" />
+                            <path fill="#FF3D00"
+                                d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 16.1 4 9.2 8.3 6.3 14.7z" />
+                            <path fill="#4CAF50"
+                                d="M24 44c5.3 0 10.2-2 13.8-5.4l-6.4-5.2C29.3 35.1 26.8 36 24 36c-5.3 0-9.8-3.4-11.4-8.1l-6.5 5C9.1 39.6 16 44 24 44z" />
+                            <path fill="#1976D2"
+                                d="M43.6 20.5H42V20H24v8h11.3c-.7 2-2 3.7-3.7 4.9l6.4 5.2C39.9 36.5 44 30.9 44 24c0-1.2-.1-2.3-.4-3.5z" />
+                        </svg>
+                    </button>
+                    <button type="button" title="Continuar com Facebook" onclick="continuarComProvedor('Facebook')">
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <path fill="#1877F2"
+                                d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.96h-1.51c-1.49 0-1.95.93-1.95 1.89v2.26h3.32l-.53 3.49h-2.79V24C19.61 23.09 24 18.1 24 12.07z" />
+                        </svg>
+                    </button>
+                    <button type="button" title="Continuar com Email" onclick="continuarComProvedor('Email')">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="rgb(222,103,6)"
+                                d="M2 4h20c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H2c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 2v.01L12 13 22 6.01V6H2zm0 12h20V8.24l-10 6.51-10-6.51V18z" />
+                        </svg>
+                    </button>
+                    <button type="button" title="Continuar com Apple" onclick="continuarComProvedor('Apple')">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="#000"
+                                d="M16.365 1.43c0 1.14-.468 2.203-1.213 2.99-.83.86-2.18 1.53-3.28 1.44-.14-1.1.42-2.24 1.17-3.02.83-.87 2.28-1.52 3.32-1.41zm4.36 16.6c-.33.76-.73 1.47-1.2 2.14-.65.94-1.18 1.6-1.6 1.97-.63.6-1.31.91-2.03.92-.52 0-1.15-.15-1.87-.46-.72-.31-1.38-.46-1.99-.46-.64 0-1.32.15-2.05.46-.73.31-1.32.47-1.78.49-.7.03-1.4-.29-2.09-.95-.44-.39-.99-1.07-1.66-2.03-.72-1.03-1.31-2.23-1.78-3.6-.5-1.48-.75-2.91-.75-4.29 0-1.58.34-2.94 1.02-4.08.53-.92 1.24-1.64 2.12-2.18.88-.53 1.83-.81 2.86-.82.55 0 1.27.17 2.17.5.9.34 1.48.51 1.73.51.19 0 .83-.2 1.92-.6 1.03-.37 1.9-.52 2.6-.47 1.92.16 3.36.91 4.32 2.27-1.72 1.04-2.57 2.5-2.55 4.38.02 1.46.55 2.68 1.58 3.64.47.45 1 .8 1.58 1.05-.13.37-.27.72-.42 1.06z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="divLogin" style="display: none;">
+            <div class="formWrapper">
+                <span class="linkVoltar" onclick="fecharLogin()">‹ Voltar</span>
+                <h2>Aceder à sua conta</h2>
+                <form action="" id="formLogin" onsubmit="return false;">
+                    <input type="text" id="loginIdentificador" placeholder="Email ou telefone">
+                    <input type="password" id="loginSenha" placeholder="Senha">
+                    <button type="button" onclick="fazerLogin()">Entrar</button>
+                </form>
+                <span class="hintCampo" style="text-align:center;">Ainda não tens conta? <a href="#"
+                        onclick="fecharLogin(); return false;"
+                        style="color: #de6706; text-decoration: none;">Cadastra-te</a></span>
+            </div>
+        </div>
+
+    </div>
+    <div id="espcaoload" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+    <div id="dimmakoToastContainer" class="toast-container" aria-live="polite"></div>
+    <script src="src/js/index.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+
+</html>

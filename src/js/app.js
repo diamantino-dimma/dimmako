@@ -1,7 +1,15 @@
-const IMGBB_API_KEY = "54f74233160a60cb0afa306af55108e1";
 const MAPLIBRE_KEY = "AAPTad4pDzvT0P2JYUFzm5-996A..QAeKAQT8o6PDE02yixDy4z0mSzhSt1tmVxvs2CVZV_Oi9-lOcF1pcIyEJ8nvpnarvRdn3TwUjlS2kGDdzNiCYQJk2i0USJnICLm3lANnq3e2ytyRAjTd3MMdYMtP70U9Z-A3k1RnzoqxsCAAuYACxKr7tuHVe6-Hlc5J8Y3AJh1kCyB46DXNmBbEpXEfxZ89S2inymLOYSlVF7GQZd83wyQAQWVnj7nQlkayHd0CqxY3AYGCAdyzAT1_KVaPo0C0";
 const friendsData = [];
 let activeFriend = null;
+let activeConversationId = null;
+let unsubscribeConversationMessages = null;
+let unsubscribeConversations = null;
+let unsubscribePublicProfiles = null;
+let unsubscribePosts = null;
+let unsubscribePostsAuth = null;
+let unsubscribeNotifications = null;
+let publicProfiles = [];
+let notifications = [];
 let activeCategory = "Todos";
 let posts = [];
 const draftMedia = Array(4).fill(null);
@@ -9,6 +17,9 @@ let nextPostId = 1;
 let currentView = "inicio";
 let chatAberto = false;
 let openCommentsPostId = null;
+let salesHistory = null;
+const localStateSyncTimes = new Map();
+const localStateSyncTimers = new Map();
 if (localStorage.getItem("dimmakoTema") !== "claro") document.body.classList.add("dark-theme");
 
 const initials = name => name.split(" ").map(part => part[0]).slice(0, 2).join("").toUpperCase();
@@ -16,20 +27,12 @@ const escapeHTML = value => String(value).replace(/[&<>"']/g, character => ({ "&
 const formatKwanza = value => `Kz ${Number(value).toLocaleString("pt-BR")}`;
 
 async function uploadImagemImgBB(ficheiro) {
-    const formData = new FormData();
-    formData.append("image", ficheiro);
-    try {
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-            method: "POST",
-            body: formData
-        });
-        const json = await res.json();
-        if (json && json.success && json.data && json.data.url) return json.data.url;
-        return null;
-    } catch (err) {
-        console.error("Falha ImgBB:", err);
-        return null;
-    }
+    if (!window.dimmakoMedia) throw new Error("O serviço de envio de imagens não foi carregado.");
+    return window.dimmakoMedia.uploadToImgBB(ficheiro);
+}
+
+async function imagemComAssinaturaValida(ficheiro) {
+    return window.dimmakoMedia?.signatureIsValid(ficheiro) || false;
 }
 
 function marcarCampo(el, valido) {
@@ -92,53 +95,27 @@ function renderPosts(filter = "") {
     melhorarCardsPublicacao();
 
     document.querySelectorAll(".btn-buy").forEach(button => {
-        button.addEventListener("click", event => {
+        button.addEventListener("click", async event => {
             event.stopPropagation();
             const bid = button.dataset.buyId;
             const post = posts.find((p, idx) => (p.id !== undefined ? String(p.id) : String(idx)) === bid);
             if (!post) return;
-
-            const vendedor = friendsData.some(item => item.name === post.name)
-                ? post.name
-                : null;
-
-            if (vendedor) {
-                openChat(vendedor);
+            if (!post.authorId) {
+                mostrarToast("O vendedor desta publicação ainda não tem um perfil Firebase associado.", "erro");
                 return;
             }
-
-            friendsData.unshift({ name: post.name, company: "", username: "", lastMessage: "Olá, quero falar sobre o produto." });
-            guardarAmigos();
-            renderFriends();
-            openChat(post.name);
-            document.getElementById("messages").innerHTML = `<div class="message mine">Olá, quero falar sobre o produto.</div>`;
-            mostrarToast(`Agora podes conversar com ${post.name}.`, "sucesso");
+            await iniciarConversaAmigo(post.authorId);
         });
     });
     actualizarBadges();
 }
 
 function obterIdentificadorInteracao() {
-    try {
-        const session = JSON.parse(localStorage.getItem("dimmakoSessaoActual") || "null");
-        return session?.identificador || session?.email || session?.nome || "visitante-local";
-    } catch (error) {
-        return "visitante-local";
-    }
+    return window.dimmakoFirebase?.auth.currentUser?.uid || null;
 }
 
 function obterNomeEmpresaPublicacao(post) {
-    if (post.companyName) return post.companyName;
-    try {
-        const contas = JSON.parse(localStorage.getItem("dimmakoContas") || "[]");
-        const conta = contas.find(item =>
-            (post.authorId && [item.identificador, item.email, item.emailEmpresa].includes(post.authorId)) ||
-            [item.nome, item.nomeCompleto].includes(post.authorName || post.name)
-        );
-        return conta?.nomeEmpresa || post.name || "Empresa";
-    } catch (error) {
-        return post.name || "Empresa";
-    }
+    return post.companyName || post.authorName || post.name || "Empresa";
 }
 
 function obterAvaliacoesPublicacao(post) {
@@ -165,9 +142,22 @@ function melhorarCardsPublicacao() {
         const totalComentarios = Array.isArray(post.commentList) ? post.commentList.length : Number(post.comments) || 0;
         const nomeEmpresa = obterNomeEmpresaPublicacao(post);
         const avatar = card.querySelector(".post-head .avatar");
-        const nomeEl = card.querySelector(".post-head strong");
+        const nomeEl = card.querySelector(".post-head strong, .post-head [data-open-seller-profile]");
         if (avatar) avatar.textContent = initials(nomeEmpresa);
-        if (nomeEl) nomeEl.textContent = nomeEmpresa;
+        if (nomeEl && post.authorId) {
+            if (nomeEl.tagName !== "BUTTON") {
+                const profileLink = document.createElement("button");
+                profileLink.type = "button";
+                profileLink.className = "seller-profile-link";
+                profileLink.dataset.openSellerProfile = post.authorId;
+                nomeEl.replaceWith(profileLink);
+                profileLink.textContent = nomeEmpresa;
+            } else {
+                nomeEl.textContent = nomeEmpresa;
+            }
+        } else if (nomeEl) {
+            nomeEl.textContent = nomeEmpresa;
+        }
         const acoes = ["like", "comments", "share"];
         botoes.forEach((botao, indice) => {
             botao.dataset.postAction = acoes[indice];
@@ -243,6 +233,14 @@ function configurarPosicaoFiltrosMobile() {
 
 function guardarEAtualizarPublicacoes() {
     guardarPublicacoes();
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    if (user && window.dimmakoFirestoreData) {
+        window.dimmakoFirestoreData.savePrivateRecord("legacy_publications", posts, user)
+            .catch(error => {
+                console.error("Não foi possível guardar a cópia privada das publicações legadas.", error);
+                mostrarToast(error.message || "Não foi possível sincronizar o histórico local.", "erro");
+            });
+    }
     renderPosts(document.getElementById("postSearch").value);
 }
 
@@ -274,18 +272,42 @@ async function partilharPublicacao(post) {
 function configurarInteracoesPublicacao() {
     const container = document.getElementById("posts");
     container.addEventListener("click", async event => {
+        const sellerLink = event.target.closest("[data-open-seller-profile]");
+        if (sellerLink) {
+            await openPublicSellerProfile(sellerLink.dataset.openSellerProfile);
+            return;
+        }
         const ratingButton = event.target.closest("[data-post-rating]");
         if (ratingButton) {
             const post = obterPostPorId(ratingButton.dataset.postId);
-            if (!post) return;
+            const user = window.dimmakoFirebase?.auth.currentUser;
+            if (!post || !user) return;
             if (!Array.isArray(post.ratings)) post.ratings = [];
-            const userId = obterIdentificadorInteracao();
-            const existingRating = post.ratings.find(rating => rating.userId === userId);
-            if (existingRating) existingRating.stars = Number(ratingButton.dataset.postRating);
-            else post.ratings.push({ userId, stars: Number(ratingButton.dataset.postRating) });
-            guardarEAtualizarPublicacoes();
-            openCommentsPostId = post.id;
-            renderPosts(document.getElementById("postSearch").value);
+            const stars = Number(ratingButton.dataset.postRating);
+            const ratingReference = window.dimmakoFirebase.db.collection("posts").doc(String(post.id))
+                .collection("ratings").doc(user.uid);
+            const batch = window.dimmakoFirebase.db.batch();
+            batch.set(ratingReference, {
+                uid: user.uid,
+                stars,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            batch.set(ratingReference.collection("history").doc(), {
+                uid: user.uid,
+                stars,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            batch.commit().then(() => {
+                    const existingRating = post.ratings.find(rating => rating.userId === user.uid);
+                    if (existingRating) existingRating.stars = stars;
+                    else post.ratings.push({ userId: user.uid, stars });
+                    openCommentsPostId = post.id;
+                    renderPosts(document.getElementById("postSearch").value);
+                })
+                .catch(error => {
+                    console.error("Não foi possível guardar a avaliação no Firestore.", error);
+                    mostrarToast("A avaliação não foi guardada. Tente novamente.", "erro");
+                });
             return;
         }
         const botao = event.target.closest("[data-post-action]");
@@ -294,14 +316,52 @@ function configurarInteracoesPublicacao() {
         if (!post) return;
 
         if (botao.dataset.postAction === "like") {
-            if (!Array.isArray(post.likedBy)) post.likedBy = [];
-            const viewer = obterIdentificadorInteracao();
-            if (post.likedBy.includes(viewer)) return;
-            post.likedBy.push(viewer);
-            post.likes = (Number(post.likes) || 0) + 1;
-            guardarEAtualizarPublicacoes();
+            const user = window.dimmakoFirebase?.auth.currentUser;
+            if (!user) return;
+            const postRef = window.dimmakoFirebase.db.collection("posts").doc(String(post.id));
+            const likeRef = postRef.collection("likes").doc(user.uid);
+            try {
+                const created = await window.dimmakoFirebase.db.runTransaction(async transaction => {
+                    const existing = await transaction.get(likeRef);
+                    if (existing.exists) return false;
+                    transaction.set(likeRef, {
+                        uid: user.uid,
+                        name: obterNomeUtilizadorAutenticado(user),
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    transaction.update(postRef, { likes: firebase.firestore.FieldValue.increment(1) });
+                    const notificationRef = criarNotificacao(
+                        window.dimmakoFirebase.db.collection("profiles").doc(post.authorId),
+                        user
+                    );
+                    if (notificationRef) {
+                        transaction.set(notificationRef, {
+                            type: "like",
+                            actorUid: user.uid,
+                            actorName: obterNomeUtilizadorAutenticado(user),
+                            postId: String(post.id),
+                            conversationId: "",
+                            messageId: "",
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            read: false
+                        });
+                    }
+                    return true;
+                });
+                if (!created) {
+                    mostrarToast("Você já curtiu esta publicação.", "info");
+                    return;
+                }
+                post.likes = (Number(post.likes) || 0) + 1;
+                post.likedBy = [user.uid];
+                renderPosts(document.getElementById("postSearch").value);
+            } catch (error) {
+                console.error("Não foi possível guardar a curtida no Firestore.", error);
+                mostrarToast("A curtida não foi guardada. Tente novamente.", "erro");
+            }
         } else if (botao.dataset.postAction === "comments") {
             openCommentsPostId = String(openCommentsPostId) === String(post.id) ? null : post.id;
+            if (openCommentsPostId !== null) await carregarInteracoesPost(post);
             renderPosts(document.getElementById("postSearch").value);
             if (openCommentsPostId !== null) document.querySelector(`[data-post-comment-form="${CSS.escape(String(post.id))}"] input`)?.focus();
         } else if (botao.dataset.postAction === "share") {
@@ -309,7 +369,7 @@ function configurarInteracoesPublicacao() {
         }
     });
 
-    container.addEventListener("submit", event => {
+    container.addEventListener("submit", async event => {
         const form = event.target.closest("[data-post-comment-form]");
         if (!form) return;
         event.preventDefault();
@@ -323,17 +383,129 @@ function configurarInteracoesPublicacao() {
         input.setCustomValidity("");
         const post = obterPostPorId(form.dataset.postCommentForm);
         if (!post) return;
-        if (!Array.isArray(post.commentList)) post.commentList = [];
-        let session = null;
-        try { session = JSON.parse(localStorage.getItem("dimmakoSessaoActual") || "null"); } catch (error) { session = null; }
-        post.commentList.push({ name: String(session?.nome || session?.nomeEmpresa || "Utilizador").slice(0, 80), text: texto, time: new Date().toISOString() });
-        post.comments = post.commentList.length;
-        openCommentsPostId = null;
-        guardarEAtualizarPublicacoes();
+        const user = window.dimmakoFirebase?.auth.currentUser;
+        if (!user) {
+            mostrarToast("Entre na sua conta para comentar.", "erro");
+            return;
+        }
+        const postRef = window.dimmakoFirebase.db.collection("posts").doc(String(post.id));
+        const commentRef = postRef.collection("comments").doc();
+        const nome = obterNomeUtilizadorAutenticado(user);
+        const batch = window.dimmakoFirebase.db.batch();
+        batch.set(commentRef, {
+            authorUid: user.uid,
+            name: nome,
+            text: texto,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        batch.update(postRef, {
+            comments: firebase.firestore.FieldValue.increment(1),
+            lastCommentId: commentRef.id
+        });
+        const notificationRef = criarNotificacao(
+            window.dimmakoFirebase.db.collection("profiles").doc(post.authorId),
+            user
+        );
+        if (notificationRef) {
+            batch.set(notificationRef, {
+                type: "comment",
+                actorUid: user.uid,
+                actorName: nome,
+                postId: String(post.id),
+                conversationId: "",
+                messageId: "",
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                read: false
+            });
+        }
+        try {
+            await batch.commit();
+            if (!Array.isArray(post.commentList)) post.commentList = [];
+            post.commentList.push({ name: nome, text: texto });
+            post.comments = (Number(post.comments) || 0) + 1;
+            input.value = "";
+            await carregarInteracoesPost(post);
+            renderPosts(document.getElementById("postSearch").value);
+        } catch (error) {
+            console.error("Não foi possível guardar o comentário no Firestore.", error);
+            mostrarToast("O comentário não foi guardado. Tente novamente.", "erro");
+        }
     });
 }
-function renderFriends(filter = "") { const visible = friendsData.filter(friend => friend.name.toLowerCase().includes(filter.toLowerCase())); document.getElementById("friends").innerHTML = visible.length ? visible.map(friend => `<button class="friend ${activeFriend === friend.name ? "selected" : ""}" data-friend="${escapeHTML(friend.name)}"><div class="avatar-wrap"><div class="avatar">${escapeHTML(initials(friend.name))}</div></div><div class="friend-info"><strong>${escapeHTML(friend.name)}</strong><span>${escapeHTML(friend.lastMessage || "Ainda sem mensagens")}</span></div></button>`).join("") : `<div class="empty">${filter ? "Nenhum amigo encontrado." : "Sua lista de amigos ainda está vazia."}</div>`; document.querySelectorAll(".friend").forEach(button => button.addEventListener("click", () => openChat(button.dataset.friend))) }
-function openChat(name) { const friend = friendsData.find(item => item.name === name); if (!friend) return; activeFriend = name; document.getElementById("chatName").textContent = friend.name; document.getElementById("chatAvatar").textContent = initials(friend.name); document.getElementById("messages").replaceChildren(); document.getElementById("conversation").classList.add("open"); document.querySelector(".chat-panel").classList.add("is-conversation"); renderFriends(document.getElementById("friendSearch").value) }
+
+async function carregarInteracoesPost(post) {
+    const reference = window.dimmakoFirebase.db.collection("posts").doc(String(post.id));
+    const user = window.dimmakoFirebase.auth.currentUser;
+    try {
+        const [comments, ratings, ownLike] = await Promise.all([
+            reference.collection("comments").orderBy("createdAt", "asc").get(),
+            reference.collection("ratings").get(),
+            user ? reference.collection("likes").doc(user.uid).get() : Promise.resolve(null)
+        ]);
+        post.commentList = comments.docs.map(document => document.data());
+        post.ratings = ratings.docs.map(document => ({
+            userId: document.id,
+            stars: document.data().stars
+        }));
+        post.likedBy = ownLike?.exists ? [user.uid] : [];
+        post.comments = Number(post.comments) || post.commentList.length;
+    } catch (error) {
+        console.error("Não foi possível carregar curtidas e comentários do Firestore.", error);
+        mostrarToast("Não foi possível carregar os comentários desta publicação.", "erro");
+    }
+}
+function renderFriends(filter = "") {
+    const visible = friendsData.filter(friend => friend.name.toLowerCase().includes(filter.toLowerCase()));
+    const container = document.getElementById("friends");
+    container.innerHTML = visible.length ? visible.map(friend => {
+        const avatar = friend.foto
+            ? `<img src="${escapeHTML(friend.foto)}" alt="" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+            : escapeHTML(initials(friend.name));
+        return `<button class="friend ${activeFriend === friend.uid ? "selected" : ""}" data-friend="${escapeHTML(friend.uid)}"><div class="avatar-wrap"><div class="avatar">${avatar}</div></div><div class="friend-info"><strong>${escapeHTML(friend.name)}</strong><span>${escapeHTML(friend.lastMessage || "Ainda sem mensagens")}</span></div></button>`;
+    }).join("") : `<div class="empty">${filter ? "Nenhum amigo encontrado." : "Sua lista de amigos ainda está vazia."}</div>`;
+    container.querySelectorAll(".friend").forEach(button => button.addEventListener("click", () => openChat(button.dataset.friend)));
+}
+
+function openChat(uid) {
+    const friend = friendsData.find(item => item.uid === uid);
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    if (!friend || !user) return;
+    const participants = [user.uid, friend.uid].sort();
+    activeFriend = friend.uid;
+    activeConversationId = friend.conversationId || participants.join("_");
+    document.getElementById("chatName").textContent = friend.name;
+    aplicarAvatar("chatAvatar", friend.foto, friend.name);
+    document.getElementById("messages").replaceChildren();
+    document.getElementById("conversation").classList.add("open");
+    document.querySelector(".chat-panel").classList.add("is-conversation");
+    if (unsubscribeConversationMessages) unsubscribeConversationMessages();
+    unsubscribeConversationMessages = window.dimmakoFirebase.db.collection("conversations")
+        .doc(activeConversationId).collection("messages")
+        .orderBy("createdAt", "desc").limit(100)
+        .onSnapshot(snapshot => {
+            const messages = document.getElementById("messages");
+            messages.innerHTML = snapshot.docs.slice().reverse().map(doc => {
+                const message = doc.data();
+                const ownMessage = message.senderId === user.uid;
+                return `<div class="message ${ownMessage ? "mine" : ""}">${escapeHTML(message.text || "")}</div>`;
+            }).join("");
+            const latestMessage = snapshot.docs[snapshot.docs.length - 1]?.data();
+            const friend = friendsData.find(item => item.uid === uid);
+            if (friend && latestMessage) {
+                friend.lastMessage = latestMessage.text;
+                renderFriends(document.getElementById("friendSearch").value);
+            }
+
+            function obterNomeAmigoAtivo() {
+                return friendsData.find(friend => friend.uid === activeFriend)?.name || "Amigo";
+            }
+            messages.scrollTop = messages.scrollHeight;
+        }, error => {
+            console.error("Não foi possível sincronizar as mensagens.", error);
+            mostrarToast("Não foi possível carregar esta conversa. Verifique as regras do Firestore.", "erro");
+        });
+    renderFriends(document.getElementById("friendSearch").value);
+}
 function mostrarToast(mensagem, tipo = "info", duracao = 3500) {
     let container = document.getElementById("dimmakoToastContainer");
     if (!container) {
@@ -359,6 +531,7 @@ function mostrarToast(mensagem, tipo = "info", duracao = 3500) {
         }, 300);
     }, duracao);
 }
+window.mostrarToast = mostrarToast;
 
 function aplicarAvatar(elemId, foto, nome) {
     const el = document.getElementById(elemId);
@@ -393,6 +566,10 @@ function setupSession() {
     aplicarAvatar("profileAvatar", foto, name);
 
     aplicarPermissoesUsuario();
+    if (window.dimmakoFirebase?.auth.currentUser) {
+        window.dimmakoVoiceCalls?.initialize(window.dimmakoFirebase.auth.currentUser);
+    }
+    if (window.dimmakoFirebase?.auth.currentUser?.uid === session?.uid) carregarAmigos();
 }
 
 function aplicarPermissoesUsuario() {
@@ -446,7 +623,7 @@ function aplicarPermissoesUsuario() {
 }
 
 function guardarAmigos() {
-    localStorage.setItem("dimmakoAmigos", JSON.stringify(friendsData));
+    renderFriends(document.getElementById("friendSearch")?.value || "");
     actualizarBadges();
 }
 
@@ -455,7 +632,7 @@ function actualizarBadges() {
         inicio: posts.length,
         chat: friendsData.filter(item => item.lastMessage).length,
         vendas: getSalesHistoryData().length,
-        notificacoes: document.querySelectorAll(".notification-item.unread").length
+        notificacoes: notifications.filter(item => !item.read).length
     };
     document.querySelectorAll(".nav-badge").forEach(badge => {
         const valor = contadores[badge.dataset.badge] || 0;
@@ -467,13 +644,131 @@ function actualizarBadges() {
             badge.classList.remove("show");
         }
     });
+    const markReadButton = document.getElementById("markNotificationsRead");
+    if (markReadButton) markReadButton.disabled = !notifications.some(item => !item.read);
+}
+
+function carregarNotificacoes(user) {
+    if (unsubscribeNotifications) return;
+    unsubscribeNotifications = window.dimmakoFirebase.db.collection("profiles").doc(user.uid)
+        .collection("notifications").orderBy("createdAt", "desc")
+        .onSnapshot(snapshot => {
+            notifications = snapshot.docs.map(document => ({ ...document.data(), id: document.id }));
+            renderNotifications();
+            actualizarBadges();
+        }, error => {
+            unsubscribeNotifications = null;
+            console.error("Não foi possível sincronizar as notificações do Firebase.", error);
+            mostrarToast("Não foi possível carregar as notificações. Verifique as regras do Firestore.", "erro");
+        });
+}
+
+function renderNotifications() {
+    const list = document.getElementById("notificationList");
+    if (!list) return;
+    if (!notifications.length) {
+        list.innerHTML = `<div class="empty">Você ainda não tem notificações.</div>`;
+        return;
+    }
+    list.innerHTML = notifications.map(item => {
+        const verb = item.type === "like" ? "curtiu uma publicação sua"
+            : item.type === "comment" ? "comentou numa publicação sua"
+                : "enviou-lhe uma mensagem";
+        const date = item.createdAt?.toDate?.();
+        const time = date ? new Intl.DateTimeFormat("pt-PT", { dateStyle: "short", timeStyle: "short" }).format(date) : "Agora";
+        return `<button class="notification-item${item.read ? "" : " unread"}" type="button"
+            data-notification-id="${escapeHTML(item.id)}">
+            <strong>${escapeHTML(item.actorName || "Utilizador")} ${verb}</strong>
+            <span>${escapeHTML(time)}</span>
+        </button>`;
+    }).join("");
+}
+
+function criarNotificacao(reference, user) {
+    if (!reference || !user || reference.id === user.uid) return null;
+    return reference.collection("notifications").doc();
+}
+
+function obterNomeUtilizadorAutenticado(user) {
+    try {
+        const session = JSON.parse(localStorage.getItem("dimmakoSessaoActual") || "null");
+        if (session?.uid === user.uid) {
+            return String(session.nomeEmpresa || session.nome || session.nomeCompleto || user.displayName || "Utilizador").slice(0, 100);
+        }
+    } catch (error) {
+        console.error("Não foi possível ler o nome de apresentação local.", error);
+    }
+    return String(user.displayName || "Utilizador").slice(0, 100);
+}
+
+async function marcarNotificacaoLida(notificationId) {
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    if (!user || !notificationId) return;
+    await window.dimmakoFirebase.db.collection("profiles").doc(user.uid)
+        .collection("notifications").doc(notificationId).update({
+            read: true,
+            readAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
 }
 
 function carregarAmigos() {
-    try {
-        const saved = JSON.parse(localStorage.getItem("dimmakoAmigos") || "[]");
-        friendsData.splice(0, friendsData.length, ...saved);
-    } catch (e) { }
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    if (!user || unsubscribeConversations) return;
+
+    if (!unsubscribePublicProfiles) {
+        unsubscribePublicProfiles = window.dimmakoFirebase.db.collection("publicProfiles")
+            .where("visible", "==", true)
+            .where("verified", "==", true)
+            .onSnapshot(snapshot => {
+            publicProfiles = snapshot.docs.map(doc => ({ ...doc.data(), documentId: doc.id }))
+                .filter(profile => profile.uid === profile.documentId
+                    && profile.uid !== user.uid
+                    && profile.verified === true
+                    && ["cliente", "vendedor"].includes(profile.tipo)
+                    && typeof (profile.nome || profile.nomeEmpresa) === "string"
+                    && (profile.nome || profile.nomeEmpresa).trim().length > 0)
+                .map(({ documentId, ...profile }) => profile);
+            renderListaAmigosDisponiveis(document.getElementById("addFriendSearchInput")?.value || "");
+            }, error => {
+                unsubscribePublicProfiles = null;
+                console.error("Não foi possível carregar o diretório público de utilizadores.", error);
+                mostrarToast("Não foi possível carregar os utilizadores. Verifique as regras do Firestore.", "erro");
+            });
+    }
+
+    unsubscribeConversations = window.dimmakoFirebase.db.collection("conversations")
+        .where("participantUids", "array-contains", user.uid)
+        .onSnapshot(async snapshot => {
+            try {
+                const friends = await Promise.all(snapshot.docs.map(async conversation => {
+                    const otherUid = conversation.data().participantUids.find(uid => uid !== user.uid);
+                    if (!otherUid) return null;
+                    const profile = publicProfiles.find(item => item.uid === otherUid)
+                        || (await window.dimmakoFirebase.db.collection("publicProfiles").doc(otherUid).get()).data();
+                    return profile && profile.uid === otherUid
+                        && profile.verified === true
+                        && ["cliente", "vendedor"].includes(profile.tipo)
+                        && (profile.nome || profile.nomeEmpresa) ? {
+                        uid: profile.uid,
+                        name: profile.nome || profile.nomeEmpresa || "Utilizador",
+                        company: profile.nomeEmpresa || "",
+                        username: profile.uid,
+                        foto: profile.foto || "",
+                        conversationId: conversation.id
+                    } : null;
+                }));
+                friendsData.splice(0, friendsData.length, ...friends.filter(Boolean));
+                renderFriends(document.getElementById("friendSearch")?.value || "");
+                actualizarBadges();
+            } catch (error) {
+                console.error("Não foi possível carregar as conversas do Firebase.", error);
+                mostrarToast("Não foi possível carregar as conversas. Tente novamente.", "erro");
+            }
+        }, error => {
+            unsubscribeConversations = null;
+            console.error("Falha na sincronização das conversas.", error);
+            mostrarToast("Não foi possível sincronizar as conversas. Verifique as regras do Firestore.", "erro");
+        });
 }
 
 function guardarPublicacoes() {
@@ -493,7 +788,296 @@ function carregarPublicacoes() {
         });
         posts.splice(0, posts.length, ...saved);
         nextPostId = Math.max(Number(localStorage.getItem("dimmakoNextPostId")) || 1, ...posts.map(post => Number(post.id) + 1));
-    } catch (e) { }
+    } catch (error) {
+        console.error("Não foi possível ler as publicações antigas guardadas neste dispositivo.", error);
+        mostrarToast("O histórico local de publicações está danificado e foi mantido sem alterações.", "erro", 6000);
+    }
+
+    if (unsubscribePostsAuth || !window.dimmakoFirebase) return;
+    unsubscribePostsAuth = window.dimmakoFirebase.auth.onAuthStateChanged(user => {
+        if (!user) return;
+        carregarAmigos();
+        carregarNotificacoes(user);
+        (async () => {
+            try {
+                const migrationWarnings = await migrarDadosLocaisParaFirebase(user);
+                if (migrationWarnings.length) {
+                    mostrarToast(migrationWarnings.join(" "), "info", 7000);
+                }
+                await carregarHistoricoVendasFirebase(user);
+                await carregarPreferenciasFirebase(user);
+            } catch (error) {
+                console.error("Não foi possível migrar todos os dados locais para o Firebase.", error);
+                mostrarToast(error.message || "A sincronização de dados locais falhou. Os dados deste dispositivo foram mantidos.", "erro", 6500);
+            }
+            if (unsubscribePosts) return;
+            unsubscribePosts = window.dimmakoFirebase.db.collection("posts")
+                .orderBy("createdAt", "desc")
+                .limit(100)
+                .onSnapshot(snapshot => {
+                    posts.splice(0, posts.length, ...snapshot.docs.map(document => {
+                        const post = document.data();
+                        const cached = posts.find(item => String(item.id) === document.id);
+                        const createdAt = post.createdAt?.toDate?.();
+                        return {
+                            ...post,
+                            id: document.id,
+                            time: createdAt
+                                ? new Intl.DateTimeFormat("pt-PT", { dateStyle: "short", timeStyle: "short" }).format(createdAt)
+                                : "agora",
+                            likes: Number(post.likes) || 0,
+                            comments: Number(post.comments) || 0,
+                            likedBy: cached?.likedBy || [],
+                            commentList: cached?.commentList || [],
+                            ratings: cached?.ratings || []
+                        };
+                    }));
+                    renderPosts(document.getElementById("postSearch")?.value || "");
+                    actualizarBadges();
+                }, error => {
+                    unsubscribePosts = null;
+                    console.error("Não foi possível sincronizar as publicações do Firestore.", error);
+                    mostrarToast("Não foi possível carregar publicações do Firebase. Verifique as regras do Firestore.", "erro");
+                });
+        })();
+    });
+}
+
+async function migrarDadosLocaisParaFirebase(user) {
+    const dataService = window.dimmakoFirestoreData;
+    if (!dataService) throw new Error("O serviço de persistência Firebase não foi carregado.");
+    const warnings = [];
+    const localSessionMatchesUser = sessaoLocalPertenceA(user);
+    if (!localSessionMatchesUser && localStorage.getItem("dimmakoSessaoActual")) {
+        warnings.push("A sessão local não corresponde à conta atual; dados privados sem proprietário verificável foram mantidos neste dispositivo.");
+    }
+
+    for (const key of [
+        "dimmaPreferencias",
+        "dimmakoTema",
+        "dimmakoLocalizacaoPartilhada",
+        "dimmakoMinhaLocalizacao",
+        "dimmakoPartilhaLocalizacao"
+    ]) {
+        const stored = localStorage.getItem(key);
+        if (stored === null) continue;
+        if (key === "dimmaPreferencias" && !localSessionMatchesUser) {
+            warnings.push("As preferências locais não foram associadas à conta atual porque o proprietário não pôde ser confirmado.");
+            continue;
+        }
+        if (key.startsWith("dimmakoLocalizacao") || key === "dimmakoPartilhaLocalizacao") {
+            if (!localSessionMatchesUser) {
+                warnings.push("As localizações antigas não foram associadas à conta atual porque o proprietário local não pôde ser confirmado.");
+                continue;
+            }
+        }
+        let value;
+        try {
+            value = JSON.parse(stored);
+        } catch (error) {
+            throw new Error(`Os dados locais "${key}" não puderam ser lidos; o conteúdo original foi preservado.`);
+        }
+        await dataService.importPrivateRecord(`legacy_${key}`, value, user);
+    }
+
+    const legacySales = localStorage.getItem("dimmakoHistoricoVendas");
+    if (legacySales !== null) {
+        if (!localSessionMatchesUser) {
+            warnings.push("O histórico de vendas local não foi associado à conta atual porque o proprietário local não pôde ser confirmado.");
+        } else {
+        let records;
+        try {
+            records = JSON.parse(legacySales);
+        } catch (error) {
+            throw new Error("O histórico de vendas local não pôde ser lido; o conteúdo original foi preservado.");
+        }
+        if (!Array.isArray(records)) throw new Error("O histórico de vendas local tem um formato inválido e foi preservado.");
+        await dataService.importSales(records, user);
+        }
+    }
+
+    const legacyPosts = localStorage.getItem("dimmakoPublicacoes");
+    if (legacyPosts === null) return warnings;
+    let records;
+    try {
+        records = JSON.parse(legacyPosts);
+    } catch (error) {
+        throw new Error("As publicações locais não puderam ser lidas; o conteúdo original foi preservado.");
+    }
+    if (!Array.isArray(records)) throw new Error("As publicações locais têm um formato inválido e foram preservadas.");
+
+    let skippedUnverifiedPosts = 0;
+    for (let index = 0; index < records.length; index += 1) {
+        const candidate = records[index];
+        const ownerMatches = candidate && (candidate.authorId === user.uid
+            || (user.email && String(candidate.authorId || "").toLowerCase() === user.email.toLowerCase()));
+        if (!ownerMatches) {
+            skippedUnverifiedPosts += 1;
+            continue;
+        }
+        const legacyPost = await prepararPublicacaoLegada(candidate);
+        await dataService.importPrivateRecord(`legacy_post_${index}`, legacyPost, user);
+        if (!publicacaoLegadaValida(legacyPost)) continue;
+
+        const reference = window.dimmakoFirebase.db.collection("posts")
+            .doc(`legacy_${user.uid}_${index}`);
+        const existing = await reference.get();
+        if (existing.exists) continue;
+        await reference.set({
+            authorId: user.uid,
+            name: String(legacyPost.companyName || legacyPost.authorName || legacyPost.name || "Vendedor").slice(0, 100),
+            authorName: String(legacyPost.authorName || legacyPost.name || "Vendedor").slice(0, 100),
+            companyName: String(legacyPost.companyName || legacyPost.name || "Vendedor").slice(0, 100),
+            category: String(legacyPost.category || "Comércio Geral").slice(0, 80),
+            title: String(legacyPost.title || legacyPost.name || "Produto").slice(0, 120),
+            text: String(legacyPost.text || legacyPost.description || "Publicação migrada do histórico local.").slice(0, 2000),
+            price: Math.max(0, Number(legacyPost.price) || 0),
+            delivery: {
+                municipality: Math.max(0, Number(legacyPost.delivery?.municipality) || 0),
+                outsideMunicipality: Math.max(0, Number(legacyPost.delivery?.outsideMunicipality) || 0),
+                outsideLuanda: Math.max(0, Number(legacyPost.delivery?.outsideLuanda) || 0)
+            },
+            media: legacyPost.media.filter(item => window.dimmakoMedia.isImgBBUrl(item.src)).slice(0, 4),
+            likes: Math.max(0, Math.floor(Number(legacyPost.likes) || 0)),
+            comments: Math.max(0, Math.floor(Number(legacyPost.comments) || 0)),
+            available: legacyPost.available !== false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+    if (skippedUnverifiedPosts) {
+        warnings.push(`${skippedUnverifiedPosts} publicação(ões) locais sem proprietário verificável foram mantidas neste dispositivo e não foram atribuídas a esta conta.`);
+    }
+    return warnings;
+}
+
+async function prepararPublicacaoLegada(record) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) {
+        throw new Error("Uma publicação local tem um formato inválido e foi mantida no dispositivo.");
+    }
+    const post = JSON.parse(JSON.stringify(record));
+    const legacyMedia = Array.isArray(post.media)
+        ? post.media
+        : post.image ? [{ type: "image", src: post.image }] : [];
+    post.media = [];
+    for (const item of legacyMedia) {
+        let source = item && (item.src || item.url);
+        if (typeof source !== "string") continue;
+        if (source.startsWith("data:")) {
+            const response = await fetch(source);
+            if (!response.ok) throw new Error("Uma imagem antiga não pôde ser preparada para o ImgBB.");
+            source = await uploadImagemImgBB(await response.blob());
+        } else if (source.startsWith("blob:")) {
+            throw new Error("Uma publicação contém uma imagem temporária que não pode ser recuperada. O original local foi mantido.");
+        }
+        if (window.dimmakoMedia.isImgBBUrl(source)) post.media.push({ type: "image", src: source });
+    }
+    if (post.image !== undefined) {
+        const imageUrl = typeof post.image === "string" && window.dimmakoMedia.isImgBBUrl(post.image)
+            ? post.image
+            : post.media[0]?.src;
+        if (imageUrl) post.image = imageUrl;
+        else delete post.image;
+    }
+    return post;
+}
+
+function publicacaoLegadaValida(post) {
+    return Array.isArray(post.media)
+        && post.media.length > 0
+        && String(post.title || post.name || "").trim().length >= 2
+        && String(post.text || post.description || "").trim().length >= 8
+        && String(post.category || "Comércio Geral").trim().length > 0;
+}
+
+async function carregarHistoricoVendasFirebase(user) {
+    const collection = window.dimmakoFirebase.db.collection("profiles").doc(user.uid).collection("sales");
+    const snapshot = await collection.get();
+    salesHistory = snapshot.docs.map(document => {
+        const data = document.data();
+        return data.legacyRecord || { ...data, id: document.id };
+    });
+    renderSalesHistory();
+    actualizarBadges();
+}
+
+async function carregarPreferenciasFirebase(user) {
+    const reference = window.dimmakoFirebase.db.collection("profiles").doc(user.uid)
+        .collection("privateData").doc("preferences");
+    const snapshot = await reference.get();
+    let values;
+    if (snapshot.exists && snapshot.data().value) {
+        values = snapshot.data().value;
+    } else {
+        let localPreferences = {};
+        if (sessaoLocalPertenceA(user)) {
+            try {
+                localPreferences = JSON.parse(localStorage.getItem("dimmaPreferencias") || "{}");
+            } catch (error) {
+                throw new Error("As preferências locais não puderam ser lidas e foram preservadas.");
+            }
+        }
+        values = { ...localPreferences, darkTheme: localStorage.getItem("dimmakoTema") !== "claro" };
+        await window.dimmakoFirestoreData.savePrivateRecord("preferences", values, user);
+    }
+    const publicProfileSetting = document.querySelector('[data-setting="publicProfile"]');
+    if (typeof values.publicProfile !== "boolean" && publicProfileSetting) {
+        values.publicProfile = publicProfileSetting.checked;
+    }
+    document.querySelectorAll("[data-setting]").forEach(input => {
+        if (Object.prototype.hasOwnProperty.call(values, input.dataset.setting)) {
+            input.checked = Boolean(values[input.dataset.setting]);
+        }
+    });
+    if (typeof values.darkTheme === "boolean") aplicarTema(values.darkTheme);
+    if (typeof values.publicProfile === "boolean") await atualizarVisibilidadePerfil(user, values.publicProfile);
+    const localSettings = { ...values };
+    delete localSettings.darkTheme;
+    localStorage.setItem("dimmaPreferencias", JSON.stringify(localSettings));
+}
+
+function sessaoLocalPertenceA(user) {
+    try {
+        const session = JSON.parse(localStorage.getItem("dimmakoSessaoActual") || "null");
+        return Boolean(session && (
+            session.uid === user.uid
+            || (user.email && String(session.identificador || session.email || "").toLowerCase() === user.email.toLowerCase())
+        ));
+    } catch (error) {
+        console.error("Não foi possível confirmar o proprietário dos dados locais.", error);
+        return false;
+    }
+}
+
+async function atualizarVisibilidadePerfil(user, visible) {
+    const db = window.dimmakoFirebase.db;
+    const privateProfile = await db.collection("profiles").doc(user.uid).get();
+    if (!privateProfile.exists) throw new Error("O perfil Firebase não foi encontrado para atualizar a visibilidade.");
+    const profile = privateProfile.data();
+    await db.collection("publicProfiles").doc(user.uid).set({
+        uid: user.uid,
+        tipo: profile.tipo,
+        nome: profile.nome || "Utilizador",
+        nomeEmpresa: profile.nomeEmpresa || "",
+        categoria: profile.categoria || "",
+        descricao: profile.descricao || "",
+        foto: profile.foto || null,
+        visible: Boolean(visible),
+        verified: true,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+}
+
+async function persistirPreferenciasFirebase(values) {
+    localStorage.setItem("dimmaPreferencias", JSON.stringify(values));
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    if (!user || !window.dimmakoFirestoreData) throw new Error("Inicie sessão antes de guardar preferências.");
+    await window.dimmakoFirestoreData.savePrivateRecord("preferences", {
+        ...values,
+        darkTheme: document.body.classList.contains("dark-theme")
+    }, user);
+    if (Object.prototype.hasOwnProperty.call(values, "publicProfile")) {
+        await atualizarVisibilidadePerfil(user, values.publicProfile);
+    }
 }
 
 function atualizarBotaoPublicarMobile() {
@@ -582,8 +1166,7 @@ document.querySelectorAll("#filterTrack button").forEach(button => button.addEve
 }));
 document.getElementById("filterPrev").addEventListener("click", () => document.getElementById("filterTrack").scrollBy({ left: -260, behavior: "smooth" }));
 document.getElementById("filterNext").addEventListener("click", () => document.getElementById("filterTrack").scrollBy({ left: 260, behavior: "smooth" }));
-/* ===================== GEOLOCALIZAÇÃO (GPS + IP VIA IPINFO.IO) ===================== */
-const IPINFO_TOKEN = "78bd5d6e5a8a22";
+/* ===================== GEOLOCALIZAÇÃO POR GPS ===================== */
 const CHAVE_LOCALIZACAO_PARTILHADA = "dimmakoLocalizacaoPartilhada";
 const CHAVE_LOCALIZACAO_USUARIO = "dimmakoMinhaLocalizacao";
 let watchLocalizacaoId = null;
@@ -591,34 +1174,6 @@ let ultimaPosicao = null;
 let marcadorPartilha = null;
 let marcadorUsuario = null;
 let estiloMapaActual = "normal";
-
-async function obterLocalizacaoPorIP() {
-    try {
-        const resposta = await fetch(`https://ipinfo.io/json?token=${IPINFO_TOKEN}`);
-        if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
-        const dados = await resposta.json();
-        console.log("[IPinfo] Dados recebidos:", dados);
-        if (dados.loc) {
-            const [lat, lng] = dados.loc.split(",").map(coord => parseFloat(coord));
-            if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-                const localizacao = {
-                    latitude: lat,
-                    longitude: lng,
-                    cidade: dados.city || "",
-                    regiao: dados.region || "",
-                    pais: dados.country || "",
-                    origem: "ip"
-                };
-                localStorage.setItem(CHAVE_LOCALIZACAO_USUARIO, JSON.stringify(localizacao));
-                return localizacao;
-            }
-        }
-        return null;
-    } catch (erro) {
-        console.error("Erro ao procurar localização por IP:", erro);
-        return null;
-    }
-}
 
 function obterLocalizacaoGPS() {
     return new Promise(resolver => {
@@ -637,6 +1192,7 @@ function obterLocalizacaoGPS() {
                     origem: "gps"
                 };
                 localStorage.setItem(CHAVE_LOCALIZACAO_USUARIO, JSON.stringify(dados));
+                sincronizarEstadoLocalFirebase(CHAVE_LOCALIZACAO_USUARIO, "location_owner");
                 resolver(dados);
             },
             () => resolver(null),
@@ -645,30 +1201,14 @@ function obterLocalizacaoGPS() {
     });
 }
 
-function lerLocalizacaoManual() {
-    try {
-        const guardada = JSON.parse(localStorage.getItem(CHAVE_LOCALIZACAO_USUARIO) || "null");
-        if (guardada && guardada.origem === "mapa" && Number.isFinite(guardada.latitude) && Number.isFinite(guardada.longitude)) {
-            return guardada;
-        }
-        return null;
-    } catch (erro) {
-        return null;
-    }
-}
-
 async function obterLocalizacaoAtual() {
-    const gps = await obterLocalizacaoGPS();
-    if (gps) return gps;
-    const manual = lerLocalizacaoManual();
-    if (manual) return manual;
-    return await obterLocalizacaoPorIP();
+    return await obterLocalizacaoGPS();
 }
 
 function lerLocalizacaoPartilhada() {
     try {
         const guardada = JSON.parse(localStorage.getItem(CHAVE_LOCALIZACAO_PARTILHADA) || "null");
-        if (!guardada || typeof guardada.latitude !== "number" || typeof guardada.longitude !== "number") return null;
+        if (!guardada || guardada.origem === "ip" || typeof guardada.latitude !== "number" || typeof guardada.longitude !== "number") return null;
         return guardada;
     } catch (erro) {
         return null;
@@ -684,6 +1224,7 @@ function guardarLocalizacaoPartilhada(dados) {
         destinatario: activeFriend || "usuario"
     };
     localStorage.setItem(CHAVE_LOCALIZACAO_PARTILHADA, JSON.stringify(payload));
+    sincronizarEstadoLocalFirebase(CHAVE_LOCALIZACAO_PARTILHADA, "location_shared");
 }
 
 function definirPosicao(dados) {
@@ -697,10 +1238,11 @@ function definirPosicao(dados) {
         cidade: dados.cidade || ""
     };
     localStorage.setItem(CHAVE_LOCALIZACAO_USUARIO, JSON.stringify(ultimaPosicao));
+    sincronizarEstadoLocalFirebase(CHAVE_LOCALIZACAO_USUARIO, "location_owner");
     actualizarOrigemLocalizacao();
 }
 
-/* Indicador visível no mapa: de onde vem a localização (GPS, IP da operadora, mapa ou partilha) */
+/* Indicador visível no mapa: localização por GPS, mapa ou partilha */
 const ORIGENS_LOCALIZACAO = {
     gps: {
         classe: "gps",
@@ -711,12 +1253,6 @@ const ORIGENS_LOCALIZACAO = {
     mapa: {
         classe: "mapa",
         texto: () => "Definida por si no mapa"
-    },
-    ip: {
-        classe: "ip",
-        texto: posicao => posicao.cidade
-            ? `IP da operadora · ${posicao.cidade} (aproximada)`
-            : "IP da operadora · localização aproximada"
     },
     partilhada: {
         classe: "partilhada",
@@ -741,9 +1277,6 @@ function actualizarOrigemLocalizacao() {
 function detalharOrigemLocalizacao() {
     if (!ultimaPosicao) return;
     switch (ultimaPosicao.origem) {
-        case "ip":
-            mostrarToast("Localização aproximada, obtida pela rede da operadora (IP). Pode não ser o seu local exacto — use «Definir no mapa» para corrigir.", "info", 7000);
-            break;
         case "mapa":
             mostrarToast("Localização que você marcou manualmente no mapa.", "info", 4500);
             break;
@@ -791,6 +1324,7 @@ function enviarLocalizacaoBackend(dados) {
     console.log("[WebSocket] Enviando localização →", JSON.stringify(payload));
     try {
         localStorage.setItem("dimmakoPartilhaLocalizacao", JSON.stringify(payload));
+        sincronizarEstadoLocalFirebase("dimmakoPartilhaLocalizacao", "location_share_payload");
         guardarLocalizacaoPartilhada(payload);
     } catch (erro) { }
 }
@@ -820,7 +1354,7 @@ function sincronizarMapaPrincipal() {
     if (!pontoAlvo) return;
 
     const { latitude, longitude } = pontoAlvo;
-    const popupHTML = `<div style="padding:4px 2px;"><strong style="font-size:14px;color:${localizacaoPartilhada ? '#f59e0b' : '#2563eb'};">${escapeHTML(localizacaoPartilhada ? (activeFriend || "Amigo") : obterNomeSessao())}</strong><br><span style="font-size:12px;opacity:0.8;">${localizacaoPartilhada ? "Localização partilhada · Ao vivo" : "Localização em tempo real · Ao vivo"}</span></div>`;
+    const popupHTML = `<div style="padding:4px 2px;"><strong style="font-size:14px;color:${localizacaoPartilhada ? '#f59e0b' : '#2563eb'};">${escapeHTML(localizacaoPartilhada ? obterNomeAmigoAtivo() : obterNomeSessao())}</strong><br><span style="font-size:12px;opacity:0.8;">${localizacaoPartilhada ? "Localização partilhada · Ao vivo" : "Localização em tempo real · Ao vivo"}</span></div>`;
 
     if (!marcadorPartilha && window.maplibregl) {
         marcadorPartilha = new maplibregl.Marker({ color: localizacaoPartilhada ? "#f59e0b" : "#2563eb" })
@@ -914,7 +1448,7 @@ function iniciarPartilhaLocalizacao() {
         mensagens.appendChild(criarCartaoLocalizacao());
         mensagens.scrollTop = mensagens.scrollHeight;
     }
-    const amigo = friendsData.find(item => item.name === activeFriend);
+    const amigo = friendsData.find(item => item.uid === activeFriend);
     if (amigo) amigo.lastMessage = "Localização em tempo real";
     guardarAmigos();
 }
@@ -1033,11 +1567,9 @@ function setupMapLocate() {
                 marcadorUsuario.setLngLat([posicao.longitude, posicao.latitude]);
             }
             mapInstance.flyTo({ center: [posicao.longitude, posicao.latitude], zoom: 14, essential: true });
-            mostrarToast(posicao.origem === "gps"
-                ? "Localização obtida via GPS."
-                : `Localização aproximada por IP (${posicao.cidade || "via IP"}).`, "sucesso", 2800);
+            mostrarToast("Localização real obtida via GPS.", "sucesso", 2800);
         } else {
-            mostrarToast("Não foi possível obter a localização.", "erro");
+            mostrarToast("Não foi possível obter a localização GPS. Ative a permissão de localização do navegador e tente novamente.", "erro", 5000);
         }
     });
 }
@@ -1103,11 +1635,20 @@ function setupMapSetLocation() {
 
 /* ===================== CHAMADA E MENU DA CONVERSA ===================== */
 document.getElementById("callButton").addEventListener("click", () => {
-    if (!activeFriend) {
-        mostrarToast("Seleccione um amigo para ligar.", "info");
+    const friend = friendsData.find(item => item.uid === activeFriend);
+    if (!friend || !activeConversationId) {
+        mostrarToast("Seleccione uma conversa antes de iniciar a chamada.", "info");
         return;
     }
-    mostrarToast(`A iniciar chamada com ${activeFriend}…`, "info", 3000);
+    const button = document.getElementById("callButton");
+    if (!window.dimmakoVoiceCalls) {
+        mostrarToast("O serviço de chamadas não foi carregado.", "erro");
+        return;
+    }
+    button.disabled = true;
+    window.dimmakoVoiceCalls.startOutgoingCall(activeConversationId, friend)
+        .catch(error => mostrarToast(error.message || "Não foi possível iniciar a chamada.", "erro"))
+        .finally(() => { button.disabled = false; });
 });
 
 function configurarMenuChat() {
@@ -1145,16 +1686,7 @@ function excluirAmigo() {
         mostrarToast("Seleccione um amigo.", "info");
         return;
     }
-    const indice = friendsData.findIndex(item => item.name === activeFriend);
-    if (indice > -1) {
-        friendsData.splice(indice, 1);
-        guardarAmigos();
-    }
-    activeFriend = null;
-    document.querySelector(".chat-panel").classList.remove("is-conversation");
-    document.getElementById("conversation").classList.remove("open");
-    renderFriends(document.getElementById("friendSearch").value);
-    mostrarToast("Amigo excluído.", "sucesso");
+    mostrarToast("A remoção segura de conversas ainda não está configurada.", "info");
 }
 
 function limparConversa() {
@@ -1162,8 +1694,7 @@ function limparConversa() {
         mostrarToast("Seleccione um amigo.", "info");
         return;
     }
-    document.getElementById("messages").replaceChildren();
-    mostrarToast("Conversa limpa.", "sucesso");
+    mostrarToast("As mensagens partilhadas não podem ser apagadas localmente.", "info");
 }
 
 function denunciarAmigo() {
@@ -1171,28 +1702,70 @@ function denunciarAmigo() {
         mostrarToast("Seleccione um amigo.", "info");
         return;
     }
-    mostrarToast(`Denúncia contra ${activeFriend} enviada. A equipa vai analisar a conversa.`, "sucesso", 4500);
+    mostrarToast("O envio de denúncias ainda não está ligado a um serviço seguro.", "info", 4500);
 }
 configurarMenuChat();
 document.getElementById("chatBack").addEventListener("click", () => {
+    if (unsubscribeConversationMessages) unsubscribeConversationMessages();
+    unsubscribeConversationMessages = null;
+    activeConversationId = null;
     activeFriend = null;
     document.querySelector(".chat-panel").classList.remove("is-conversation");
     document.getElementById("conversation").classList.remove("open");
 });
-document.getElementById("messageForm").addEventListener("submit", event => {
+document.getElementById("messageForm").addEventListener("submit", async event => {
     event.preventDefault();
     const input = document.getElementById("messageInput");
-    if (!input.value.trim() || !activeFriend) return;
-    const texto = input.value.trim();
-    document.getElementById("messages").insertAdjacentHTML("beforeend", `<div class="message mine">${escapeHTML(texto)}</div>`);
-    const friend = friendsData.find(item => item.name === activeFriend);
-    if (friend) friend.lastMessage = texto;
-    guardarAmigos();
-    input.value = "";
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    const texto = input.value.normalize("NFC").replace(/[\u0000-\u001F\u007F]/g, "").trim();
+    if (!texto || !activeFriend || !activeConversationId) return;
+    if (texto.length > 2000 || !user) {
+        mostrarToast("A mensagem deve ter até 2.000 caracteres e uma sessão ativa.", "erro");
+        return;
+    }
+
+    try {
+        await window.dimmakoFirebase.ready;
+        const db = window.dimmakoFirebase.db;
+        const batch = db.batch();
+        const messageRef = db.collection("conversations").doc(activeConversationId)
+            .collection("messages").doc();
+        batch.set(messageRef, {
+                senderId: user.uid,
+                text: texto,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        const notificationsEnabled = document.querySelector('[data-setting="messageNotifications"]')?.checked !== false;
+        if (notificationsEnabled && activeFriend !== user.uid) {
+            const notificationRef = db.collection("profiles").doc(activeFriend).collection("notifications").doc();
+            batch.set(notificationRef, {
+                type: "message",
+                actorUid: user.uid,
+                actorName: obterNomeUtilizadorAutenticado(user),
+                postId: "",
+                conversationId: activeConversationId,
+                messageId: messageRef.id,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                read: false
+            });
+        }
+        await batch.commit();
+        input.value = "";
+    } catch (error) {
+        console.error("Não foi possível enviar a mensagem pelo Firebase.", error);
+        mostrarToast("A mensagem não foi enviada. Verifique a ligação e tente novamente.", "erro");
+    }
 });
-document.getElementById("btnSair").addEventListener("click", () => {
-    localStorage.removeItem("dimmakoSessaoActual");
-    window.location.href = "index.html";
+document.getElementById("btnSair").addEventListener("click", async () => {
+    try {
+        await window.dimmakoFirebase.ready;
+        await window.dimmakoFirebase.auth.signOut();
+        localStorage.removeItem("dimmakoSessaoActual");
+        window.location.replace("index.html");
+    } catch (error) {
+        console.error("Não foi possível terminar a sessão Firebase.", error);
+        mostrarToast("Não foi possível sair da conta. Tente novamente.", "erro");
+    }
 });
 document.getElementById("mobilePublish").addEventListener("click", () => {
     if (chatAberto) {
@@ -1256,6 +1829,9 @@ function TrocarPagina(view) {
     }
 
     currentView = view;
+    const contentArea = document.querySelector(".content");
+    contentArea?.classList.toggle("home-view", view === "inicio");
+    contentArea?.classList.toggle("profile-view", view === "perfil");
     const targetId = pageTargets[view] || pageTargets.inicio;
     document.querySelector(".search-area").style.display = view === "inicio" ? "" : "none";
     document.querySelectorAll(".page-screen").forEach(section => {
@@ -1288,14 +1864,59 @@ const salesPeriods = {
 
 function renderSales(period = "day") {
     const data = salesPeriods[period] || salesPeriods.day;
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const yearStart = new Date(today.getFullYear(), 0, 1);
+    const getSaleDate = sale => {
+        const value = sale.createdAt?.toDate?.() || sale.createdAt || sale.date;
+        if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+        if (typeof value !== "string") return null;
+        if (value.toLowerCase() === "hoje") return new Date(today);
+        if (value.toLowerCase() === "ontem") {
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            return yesterday;
+        }
+        const localDate = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (localDate) return new Date(Number(localDate[3]), Number(localDate[2]) - 1, Number(localDate[1]));
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    };
+    const datedSales = getSalesHistoryData().map(sale => ({ sale, date: getSaleDate(sale) }));
+    const inPeriod = datedSales.filter(({ date }) => {
+        if (!date) return false;
+        if (period === "day") return date.toDateString() === today.toDateString();
+        if (period === "week") return date >= monday && date < new Date(monday.getTime() + 7 * 86400000);
+        if (period === "month") return date >= monthStart && date < new Date(today.getFullYear(), today.getMonth() + 1, 1);
+        return date >= yearStart && date < new Date(today.getFullYear() + 1, 0, 1);
+    });
+    const labels = data.labels.slice();
+    const values = Array(labels.length).fill(0);
+    inPeriod.forEach(({ sale, date }) => {
+        if ((sale.status || "concluido").toLowerCase() !== "concluido") return;
+        let index = 0;
+        if (period === "day") index = Math.max(0, Math.min(7, Math.floor(date.getHours() / 2) - 4));
+        else if (period === "week") index = (date.getDay() + 6) % 7;
+        else if (period === "month") index = Math.min(3, Math.floor((date.getDate() - 1) / 7));
+        else index = date.getMonth();
+        values[index] += Number(sale.price) || 0;
+    });
+    const completed = inPeriod.filter(({ sale }) => (sale.status || "concluido").toLowerCase() === "concluido");
+    const revenue = completed.reduce((sum, { sale }) => sum + (Number(sale.price) || 0), 0);
+    const pending = inPeriod.filter(({ sale }) => (sale.status || "").toLowerCase() === "pendente").length;
+    const maximum = Math.max(...values, 0);
+    const chartValues = values.map(value => maximum ? Math.max(4, Math.round(value / maximum * 100)) : 0);
     document.getElementById("salesPeriodLabel").textContent = data.label;
-    document.getElementById("salesRevenue").textContent = data.revenue;
-    document.getElementById("salesOrders").textContent = data.orders;
-    document.getElementById("salesAverage").textContent = data.average;
-    document.getElementById("salesPending").textContent = data.pending;
-    document.getElementById("chartTotal").textContent = data.total;
+    document.getElementById("salesRevenue").textContent = formatKwanza(revenue);
+    document.getElementById("salesOrders").textContent = String(inPeriod.length);
+    document.getElementById("salesAverage").textContent = formatKwanza(completed.length ? revenue / completed.length : 0);
+    document.getElementById("salesPending").textContent = String(pending);
+    document.getElementById("chartTotal").textContent = `${inPeriod.length} pedido${inPeriod.length === 1 ? "" : "s"}`;
     document.querySelectorAll(".period-switch button").forEach(button => button.classList.toggle("active", button.dataset.period === period));
-    document.getElementById("salesChart").innerHTML = data.values.map((value, index) => `<div class="chart-column"><div class="chart-bar" style="height:${value}%" title="${data.labels[index]}: ${value}"></div><span>${data.labels[index]}</span></div>`).join("");
+    document.getElementById("salesChart").innerHTML = chartValues.map((value, index) => `<div class="chart-column"><div class="chart-bar" style="height:${value}%" title="${labels[index]}: ${formatKwanza(values[index])}"></div><span>${labels[index]}</span></div>`).join("");
 }
 
 const mapPlaces = [
@@ -1382,13 +2003,14 @@ function initializeMap() {
         mapInstance.resize();
     });
 
-    // Centraliza no utilizador: GPS ou, em fallback, IP (ipinfo.io)
+    // Só centraliza automaticamente quando o GPS do dispositivo fornece coordenadas.
     obterLocalizacaoAtual().then(posicao => {
-        if (!posicao || !mapInstance) return;
-        definirPosicao(posicao);
-        if (posicao.origem === "ip") {
-            mostrarToast("Sem permissão de GPS: o mapa mostra a localização aproximada da operadora. Use «Definir no mapa» para corrigir.", "info", 7000);
+        if (!mapInstance) return;
+        if (!posicao) {
+            mostrarToast("Ative a permissão de localização para mostrar a sua posição real no mapa.", "info", 5000);
+            return;
         }
+        definirPosicao(posicao);
         const aplicar = () => {
             mapInstance.flyTo({ center: [posicao.longitude, posicao.latitude], zoom: 13, essential: true });
             if (!marcadorUsuario && window.maplibregl) {
@@ -1479,7 +2101,12 @@ async function searchMapPlace(value) {
 
 function loadSettings() {
     let saved = {};
-    try { saved = JSON.parse(localStorage.getItem("dimmaPreferencias") || "{}"); } catch (error) { saved = {}; }
+    try {
+        saved = JSON.parse(localStorage.getItem("dimmaPreferencias") || "{}");
+    } catch (error) {
+        console.error("Não foi possível ler as preferências guardadas neste dispositivo.", error);
+        mostrarToast("As preferências locais estão danificadas e foram mantidas.", "erro");
+    }
     document.querySelectorAll("[data-setting]").forEach(input => {
         if (Object.prototype.hasOwnProperty.call(saved, input.dataset.setting)) input.checked = saved[input.dataset.setting];
     });
@@ -1490,10 +2117,44 @@ let activeHistoryFilter = "todos";
 let historySearchTerm = "";
 
 function getSalesHistoryData() {
+    if (Array.isArray(salesHistory)) return salesHistory;
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    if (!user) return [];
     try {
+        if (!sessaoLocalPertenceA(user)) return [];
         return JSON.parse(localStorage.getItem("dimmakoHistoricoVendas") || "[]");
-    } catch (e) {
+    } catch (error) {
+        console.error("Não foi possível ler o histórico de vendas local.", error);
         return [];
+    }
+}
+
+function sincronizarEstadoLocalFirebase(localKey, recordId) {
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    if (!user || !window.dimmakoFirestoreData) return;
+    const persist = () => {
+        localStateSyncTimers.delete(recordId);
+        const raw = localStorage.getItem(localKey);
+        if (raw === null) return;
+        let value;
+        try {
+            value = JSON.parse(raw);
+        } catch (error) {
+            console.error(`Não foi possível ler o registo local "${localKey}" para sincronização.`, error);
+            mostrarToast("Um registo local não pôde ser sincronizado e foi mantido neste dispositivo.", "erro");
+            return;
+        }
+        localStateSyncTimes.set(recordId, Date.now());
+        window.dimmakoFirestoreData.savePrivateRecord(recordId, value, user).catch(error => {
+            console.error(`Não foi possível sincronizar "${localKey}" com o Firebase.`, error);
+            mostrarToast(error.message || "Não foi possível guardar os dados no Firebase.", "erro");
+        });
+    };
+    const remaining = 60000 - (Date.now() - (localStateSyncTimes.get(recordId) || 0));
+    if (remaining <= 0) {
+        persist();
+    } else if (!localStateSyncTimers.has(recordId)) {
+        localStateSyncTimers.set(recordId, window.setTimeout(persist, remaining));
     }
 }
 
@@ -1521,15 +2182,16 @@ function renderSalesHistory() {
 
     if (document.getElementById("historyCountLabel")) document.getElementById("historyCountLabel").textContent = `${filtered.length} pedido${filtered.length === 1 ? "" : "s"}`;
 
-    const tbody = document.getElementById("historyRows");
-    if (!tbody) return;
+    const tables = [document.getElementById("historyRows"), document.getElementById("salesHistoryRows")].filter(Boolean);
+    if (!tables.length) return;
 
     if (!filtered.length) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px 16px;color:var(--muted)">${historySearchTerm || activeHistoryFilter !== "todos" ? "Nenhum pedido encontrado para este filtro." : "Nenhuma venda registrada ainda no seu histórico."}</td></tr>`;
+        const message = `<tr><td colspan="5" style="text-align:center;padding:28px 16px;color:var(--muted)">${historySearchTerm || activeHistoryFilter !== "todos" ? "Nenhum pedido encontrado para este filtro." : "Nenhuma venda registrada ainda no seu histórico."}</td></tr>`;
+        tables.forEach(table => { table.innerHTML = message; });
         return;
     }
 
-    tbody.innerHTML = filtered.map(order => {
+    const markup = filtered.map(order => {
         const status = (order.status || "concluido").toLowerCase();
         const statusClass = status === "pendente" ? "pending" : (status === "cancelado" ? "cancelled" : "");
         const statusLabel = status === "pendente" ? "Pendente" : (status === "cancelado" ? "Cancelado" : "Concluído");
@@ -1541,12 +2203,30 @@ function renderSalesHistory() {
                     <td><span class="sale-status ${statusClass}">${statusLabel}</span></td>
                 </tr>`;
     }).join("");
+    tables.forEach(table => { table.innerHTML = markup; });
     actualizarBadges();
 }
 
-function markNotificationsRead() {
-    document.querySelectorAll(".notification-item.unread").forEach(item => item.classList.remove("unread"));
-    actualizarBadges();
+async function markNotificationsRead() {
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    const unread = notifications.filter(item => !item.read);
+    if (!user || !unread.length) return;
+    try {
+        const collection = window.dimmakoFirebase.db.collection("profiles").doc(user.uid).collection("notifications");
+        for (let offset = 0; offset < unread.length; offset += 450) {
+            const batch = window.dimmakoFirebase.db.batch();
+            unread.slice(offset, offset + 450).forEach(item => {
+                batch.update(collection.doc(item.id), {
+                    read: true,
+                    readAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            });
+            await batch.commit();
+        }
+    } catch (error) {
+        console.error("Não foi possível marcar todas as notificações como lidas.", error);
+        mostrarToast("Não foi possível atualizar as notificações. Tente novamente.", "erro");
+    }
 }
 
 function bindPages() {
@@ -1590,14 +2270,24 @@ function bindPages() {
         }
     });
     document.getElementById("markNotificationsRead").addEventListener("click", markNotificationsRead);
-    document.querySelectorAll(".notification-item").forEach(item => item.addEventListener("click", () => {
-        item.classList.remove("unread");
-        actualizarBadges();
-    }));
+    document.getElementById("notificationList").addEventListener("click", event => {
+        const item = event.target.closest("[data-notification-id]");
+        if (!item) return;
+        marcarNotificacaoLida(item.dataset.notificationId).catch(error => {
+            console.error("Não foi possível marcar a notificação como lida.", error);
+            mostrarToast("A notificação não foi atualizada. Tente novamente.", "erro");
+        });
+    });
     document.querySelectorAll("[data-setting]").forEach(input => {
-        input.addEventListener("change", () => {
+        input.addEventListener("change", async () => {
             const values = Object.fromEntries(Array.from(document.querySelectorAll("[data-setting]"), item => [item.dataset.setting, item.checked]));
-            localStorage.setItem("dimmaPreferencias", JSON.stringify(values));
+            try {
+                await persistirPreferenciasFirebase(values);
+            } catch (error) {
+                console.error("Não foi possível guardar as preferências no Firebase.", error);
+                mostrarToast(error.message || "A alteração não foi guardada no Firebase.", "erro");
+                return;
+            }
             const feedback = document.getElementById("settingsFeedback");
             if (feedback) {
                 feedback.textContent = "Alteração guardada.";
@@ -1607,31 +2297,73 @@ function bindPages() {
     });
     document.getElementById("themeSwitch").addEventListener("change", event => {
         aplicarTema(event.target.checked);
-
+        const values = Object.fromEntries(Array.from(document.querySelectorAll("[data-setting]"), item => [item.dataset.setting, item.checked]));
+        persistirPreferenciasFirebase(values).catch(error => {
+            console.error("Não foi possível guardar o tema no Firebase.", error);
+            mostrarToast(error.message || "O tema não foi guardado no Firebase.", "erro");
+        });
     });
-    document.getElementById("saveSettings").addEventListener("click", () => {
+    document.getElementById("saveSettings").addEventListener("click", async () => {
         const values = Object.fromEntries(Array.from(document.querySelectorAll("[data-setting]"), input => [input.dataset.setting, input.checked]));
-        localStorage.setItem("dimmaPreferencias", JSON.stringify(values));
+        try {
+            await persistirPreferenciasFirebase(values);
+        } catch (error) {
+            console.error("Não foi possível guardar as preferências no Firebase.", error);
+            mostrarToast(error.message || "As preferências não foram guardadas.", "erro");
+            return;
+        }
         const feedback = document.getElementById("settingsFeedback");
         if (feedback) {
             feedback.textContent = "Preferências guardadas com sucesso.";
             setTimeout(() => { if (feedback.textContent === "Preferências guardadas com sucesso.") feedback.textContent = ""; }, 3000);
         }
     });
-    document.getElementById("saveProfile").addEventListener("click", () => {
+    document.getElementById("saveProfile").addEventListener("click", async () => {
         const name = document.getElementById("profileNameInput").value.trim();
-        if (!name) return;
-        document.getElementById("userName").textContent = name;
-        document.getElementById("mobileUserName").textContent = name;
-        document.getElementById("profileName").textContent = name;
-        document.getElementById("avatar").textContent = initials(name);
-        document.getElementById("mobileAvatar").textContent = initials(name);
-        document.getElementById("profileAvatar").textContent = initials(name);
+        const user = window.dimmakoFirebase?.auth.currentUser;
+        if (!name || name.length > 100 || !user) {
+            mostrarToast("Introduza um nome válido e confirme que a sessão está ativa.", "erro");
+            return;
+        }
+
         try {
+            await window.dimmakoFirebase.ready;
+            const profileUpdate = {
+                nome: name,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            const privateProfile = await window.dimmakoFirebase.db.collection("profiles").doc(user.uid).get();
+            if (!privateProfile.exists) throw new Error("O perfil autenticado não foi encontrado no Firestore.");
+            const profileData = privateProfile.data();
+            const batch = window.dimmakoFirebase.db.batch();
+            batch.update(window.dimmakoFirebase.db.collection("profiles").doc(user.uid), profileUpdate);
+            batch.set(window.dimmakoFirebase.db.collection("publicProfiles").doc(user.uid), {
+                uid: user.uid,
+                tipo: profileData.tipo,
+                nome: name,
+                nomeEmpresa: profileData.nomeEmpresa || "",
+                categoria: profileData.categoria || "",
+                descricao: profileData.descricao || "",
+                foto: profileData.foto || null,
+                visible: document.querySelector('[data-setting="publicProfile"]')?.checked !== false,
+                verified: true,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await batch.commit();
             const session = JSON.parse(localStorage.getItem("dimmakoSessaoActual") || "{}");
             session.nome = name;
             localStorage.setItem("dimmakoSessaoActual", JSON.stringify(session));
-        } catch (error) { }
+            document.getElementById("userName").textContent = name;
+            document.getElementById("mobileUserName").textContent = name;
+            document.getElementById("profileName").textContent = name;
+            document.getElementById("avatar").textContent = initials(name);
+            document.getElementById("mobileAvatar").textContent = initials(name);
+            document.getElementById("profileAvatar").textContent = initials(name);
+            mostrarToast("Perfil atualizado com segurança.", "sucesso");
+        } catch (error) {
+            console.error("Não foi possível atualizar o perfil no Firebase.", error);
+            mostrarToast("Não foi possível guardar o perfil. Verifique a ligação e tente novamente.", "erro");
+        }
     });
     document.getElementById("profileSettings").addEventListener("click", () => TrocarPagina("configuracoes"));
 }
@@ -1695,8 +2427,8 @@ async function setDraftMedia(slot, file) {
     const preview = card.querySelector("[data-media-preview]");
     const input = card.querySelector("[data-media-input]");
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-        feedback.textContent = "Seleccione apenas imagens. O ImgBB não aceita vídeo.";
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+        feedback.textContent = "Selecione apenas imagens JPG, PNG, WebP ou GIF.";
         feedback.style.color = "#b43a27";
         input.value = "";
         return;
@@ -1711,19 +2443,22 @@ async function setDraftMedia(slot, file) {
     preview.innerHTML = `<span style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:var(--muted)">A enviar...</span>`;
     card.classList.add("has-media");
 
-    const urlRemota = await uploadImagemImgBB(file);
-    if (!urlRemota) {
+    let imageUrl;
+    try {
+        imageUrl = await uploadImagemImgBB(file);
+    } catch (error) {
+        console.error("Falha ao enviar mídia para o ImgBB.", error);
         preview.replaceChildren();
         preview.hidden = true;
         card.classList.remove("has-media");
         input.value = "";
         draftMedia[slot] = null;
-        mostrarToast("O envio falhou. Tente novamente.", "erro");
+        mostrarToast(error.message || "O envio para o ImgBB falhou. Tente novamente.", "erro");
         updatePublishValidation();
         return;
     }
-    draftMedia[slot] = { type: "image", src: urlRemota, url: urlRemota };
-    preview.innerHTML = `<img src="${escapeHTML(urlRemota)}" alt="Pré-visualização do produto" decoding="async">`;
+    draftMedia[slot] = { type: "image", src: imageUrl, url: imageUrl };
+    preview.innerHTML = `<img src="${escapeHTML(imageUrl)}" alt="Pré-visualização do produto" decoding="async">`;
     card.querySelector(".media-upload-trigger span").textContent = "Imagem enviada";
 
     updatePublishValidation();
@@ -1799,7 +2534,7 @@ function setupProductPublisher() {
         Array.from(form.querySelectorAll("input, select, textarea")).forEach(validarCampoProduto);
         updatePublishValidation();
     });
-    form.addEventListener("submit", event => {
+    form.addEventListener("submit", async event => {
         event.preventDefault();
         updatePublishValidation();
         if (!form.checkValidity() || !draftMedia.some(Boolean)) {
@@ -1808,21 +2543,24 @@ function setupProductPublisher() {
         }
         const semLink = draftMedia.filter(Boolean).some(item => !item.src && !item.url);
         if (semLink) {
-            mostrarToast("Aguarde o envio das imagens para o ImgBB.", "erro");
+            mostrarToast("Aguarde o envio da mídia para o ImgBB.", "erro");
+            return;
+        }
+        const user = window.dimmakoFirebase?.auth.currentUser;
+        if (!user) {
+            mostrarToast("A sessão expirou. Entre novamente para publicar.", "erro");
             return;
         }
         const name = document.getElementById("productName").value.trim();
-        const media = draftMedia.filter(Boolean).map(item => ({ type: item.type || "image", src: item.src || item.url }));
+        const media = draftMedia.filter(Boolean).map(item => ({ type: "image", src: item.src || item.url }));
         let session = null;
         try { session = JSON.parse(localStorage.getItem("dimmakoSessaoActual") || "null"); } catch (error) { session = null; }
-        posts.unshift({
-            id: nextPostId++,
-            name: document.getElementById("userName").textContent,
+        const postData = {
+            authorId: user.uid,
+            name: session?.nome || document.getElementById("userName").textContent,
             authorName: session?.nome || session?.nomeCompleto || document.getElementById("userName").textContent,
-            authorId: session?.identificador || session?.email || session?.emailEmpresa || "",
             companyName: session?.nomeEmpresa || "",
             category: document.getElementById("productCategory").value,
-            time: "agora",
             text: document.getElementById("productDescription").value.trim(),
             title: name,
             price: Number(document.getElementById("productPrice").value),
@@ -1834,8 +2572,23 @@ function setupProductPublisher() {
             media,
             likes: 0,
             comments: 0,
-            ratings: []
-        });
+            available: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        try {
+            await window.dimmakoFirebase.ready;
+            const profile = await window.dimmakoFirebase.db.collection("profiles").doc(user.uid).get();
+            if (!profile.exists || profile.data().tipo !== "vendedor") {
+                mostrarToast("Apenas um perfil de vendedor válido pode publicar produtos.", "erro");
+                return;
+            }
+            const publication = await window.dimmakoFirebase.db.collection("posts").add(postData);
+            posts.unshift({ ...postData, id: publication.id, time: "agora", ratings: [], likedBy: [], commentList: [] });
+        } catch (error) {
+            console.error("Não foi possível guardar a publicação no Firestore.", error);
+            mostrarToast("A publicação não foi guardada no Firebase. Verifique as regras e tente novamente.", "erro");
+            return;
+        }
         draftMedia.fill(null);
         activeCategory = "Todos";
         document.querySelectorAll("#filterTrack button").forEach(button => {
@@ -1846,9 +2599,8 @@ function setupProductPublisher() {
         });
         document.getElementById("postSearch").value = "";
         renderPosts();
-        guardarPublicacoes();
         closePublishModal(true);
-        mostrarToast("Publicação criada com as imagens do ImgBB.", "sucesso");
+        mostrarToast("Publicação criada com imagens do ImgBB.", "sucesso");
     });
 }
 
@@ -1885,40 +2637,163 @@ function setCarouselIndex(carousel, index) {
 }
 
 function obterDirectorioUtilizadores() {
-    let contas = [];
-    try { contas = JSON.parse(localStorage.getItem("dimmakoContas") || "[]"); } catch (e) { contas = []; }
-    let session = null;
-    try { session = JSON.parse(localStorage.getItem("dimmakoSessaoActual") || "null"); } catch (e) { session = null; }
-    const demo = [
-        { nome: "Ana Silva", nomeEmpresa: "Ana Moda", identificador: "ana.silva", tipo: "vendedor" },
-        { nome: "Carlos Neto", nomeEmpresa: "Neto Construções", identificador: "carlos.neto", tipo: "vendedor" },
-        { nome: "Marta Dias", nomeEmpresa: "", identificador: "marta.dias", tipo: "cliente" },
-        { nome: "João Ferreira", nomeEmpresa: "Tech Luanda", identificador: "joao.ferreira", tipo: "vendedor" },
-        { nome: "Lúcia Mendes", nomeEmpresa: "Sabores de Angola", identificador: "lucia.mendes", tipo: "vendedor" }
-    ];
-    const mapa = new Map();
-    [...demo, ...contas].forEach(conta => {
-        const nome = conta.nome || conta.nomeCompleto || conta.nomeEmpresa || conta.identificador;
-        const chave = (conta.identificador || nome || "").toLowerCase();
-        if (!chave) return;
-        if (session && session.identificador && chave === String(session.identificador).toLowerCase()) return;
-        mapa.set(chave, {
-            name: nome,
-            company: conta.nomeEmpresa || "",
-            username: conta.identificador || nome,
-            foto: conta.foto || ""
+    const currentUid = window.dimmakoFirebase?.auth.currentUser?.uid;
+    return publicProfiles
+        .filter(profile => profile.uid
+            && profile.uid !== currentUid
+            && profile.visible === true
+            && profile.verified === true
+            && ["cliente", "vendedor"].includes(profile.tipo)
+            && typeof (profile.nome || profile.nomeEmpresa) === "string"
+            && (profile.nome || profile.nomeEmpresa).trim().length > 0)
+        .map(profile => ({
+            uid: profile.uid,
+            name: profile.nome || profile.nomeEmpresa || "Utilizador",
+            company: profile.nomeEmpresa || "",
+            username: profile.uid,
+            foto: profile.foto || ""
+        }));
+}
+
+async function openPublicSellerProfile(uid) {
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    const modal = document.getElementById("sellerProfileModal");
+    if (!user || !uid || uid === user.uid || !modal) return;
+    const summary = document.getElementById("sellerProfileSummary");
+    const productsContainer = document.getElementById("sellerProfileProducts");
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    summary.innerHTML = `<p class="empty">A carregar perfil...</p>`;
+    productsContainer.replaceChildren();
+
+    try {
+        await window.dimmakoFirebase.ready;
+        const profileSnapshot = await window.dimmakoFirebase.db.collection("publicProfiles").doc(uid).get();
+        if (!profileSnapshot.exists) throw new Error("Este perfil público não existe.");
+        const profile = profileSnapshot.data();
+        if (profile.uid !== uid || profile.verified !== true || profile.tipo !== "vendedor" || profile.visible !== true) {
+            throw new Error("Este perfil de vendedor não está disponível publicamente.");
+        }
+
+        const productSnapshot = await window.dimmakoFirebase.db.collection("posts")
+            .where("authorId", "==", uid)
+            .get();
+        const products = productSnapshot.docs.map(document => ({
+            ...document.data(),
+            id: document.id,
+            available: document.data().available !== false
+        })).sort((left, right) => {
+            const leftDate = left.createdAt?.toDate?.().getTime() || 0;
+            const rightDate = right.createdAt?.toDate?.().getTime() || 0;
+            return rightDate - leftDate;
         });
+        const nomeEmpresa = profile.nomeEmpresa || profile.nome || "Vendedor";
+        summary.innerHTML = `
+            <div class="avatar">${profile.foto
+                ? `<img src="${escapeHTML(profile.foto)}" alt="" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+                : escapeHTML(initials(nomeEmpresa))}</div>
+            <div>
+                <h3>${escapeHTML(nomeEmpresa)}</h3>
+                <p>${escapeHTML(profile.categoria || "Vendedor")}</p>
+                <p>${escapeHTML(profile.descricao || "Este vendedor ainda não adicionou uma descrição.")}</p>
+                <p id="sellerProfileAvailableCount">${products.filter(product => product.available).length} produto(s) disponíveis · ${products.length} publicados</p>
+                <button class="screen-action" type="button" data-seller-profile-chat="${escapeHTML(uid)}">Conversar com vendedor</button>
+            </div>`;
+        document.getElementById("sellerProfileProductCount").textContent =
+            `${products.length} produto${products.length === 1 ? "" : "s"}`;
+
+        if (!products.length) {
+            productsContainer.innerHTML = `<div class="empty">Este vendedor ainda não publicou produtos.</div>`;
+            return;
+        }
+        productsContainer.innerHTML = products.map(product => {
+            const available = product.available;
+            const image = product.media?.find(item => item.type === "image" && window.dimmakoMedia.isImgBBUrl(item.src));
+            const isOwner = user.uid === uid;
+            return `<article class="seller-product-card" data-seller-product="${escapeHTML(product.id)}" data-available="${String(available)}">
+                ${image ? `<img src="${escapeHTML(image.src)}" alt="${escapeHTML(product.title || "Produto")}" loading="lazy" style="width:100%;height:200px;object-fit:cover">` : ""}
+                <div class="seller-product-card-content">
+                    <span class="seller-product-status${available ? "" : " unavailable"}">${available ? "Disponível" : "Indisponível"}</span>
+                    <h4>${escapeHTML(product.title || "Produto")}</h4>
+                    <p>${escapeHTML(product.text || "")}</p>
+                    <strong>${formatKwanza(product.price || 0)}</strong>
+                    ${isOwner ? `<button class="seller-product-availability" type="button"
+                        data-product-availability="${escapeHTML(product.id)}"
+                        data-available="${String(available)}">${available ? "Marcar indisponível" : "Marcar disponível"}</button>` : ""}
+                </div>
+            </article>`;
+        }).join("");
+    } catch (error) {
+        console.error("Não foi possível abrir o perfil público do vendedor.", error);
+        summary.innerHTML = `<p class="empty">${escapeHTML(error.message || "Não foi possível carregar este perfil.")}</p>`;
+        document.getElementById("sellerProfileProductCount").textContent = "Perfil indisponível";
+    }
+}
+
+function setupSellerProfile() {
+    const modal = document.getElementById("sellerProfileModal");
+    document.getElementById("closeSellerProfile").addEventListener("click", () => {
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
     });
-    return Array.from(mapa.values());
+    modal.addEventListener("click", event => {
+        if (event.target === modal) {
+            modal.classList.remove("open");
+            modal.setAttribute("aria-hidden", "true");
+            document.body.style.overflow = "";
+        }
+    });
+    modal.addEventListener("click", async event => {
+        const chatButton = event.target.closest("[data-seller-profile-chat]");
+        if (chatButton) {
+            modal.classList.remove("open");
+            modal.setAttribute("aria-hidden", "true");
+            document.body.style.overflow = "";
+            await iniciarConversaAmigo(chatButton.dataset.sellerProfileChat);
+            return;
+        }
+        const availabilityButton = event.target.closest("[data-product-availability]");
+        if (!availabilityButton) return;
+        const user = window.dimmakoFirebase?.auth.currentUser;
+        const productId = availabilityButton.dataset.productAvailability;
+        const nextAvailability = availabilityButton.dataset.available !== "true";
+        if (!user || !productId) return;
+        availabilityButton.disabled = true;
+        try {
+            await window.dimmakoFirebase.db.collection("posts").doc(productId).update({
+                available: nextAvailability,
+                availabilityUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            const card = availabilityButton.closest(".seller-product-card");
+            const status = card.querySelector(".seller-product-status");
+            status.textContent = nextAvailability ? "Disponível" : "Indisponível";
+            status.classList.toggle("unavailable", !nextAvailability);
+            availabilityButton.dataset.available = String(nextAvailability);
+            card.dataset.available = String(nextAvailability);
+            availabilityButton.textContent = nextAvailability ? "Marcar indisponível" : "Marcar disponível";
+            const availableCount = document.querySelectorAll('#sellerProfileProducts .seller-product-card[data-available="true"]').length;
+            const totalCount = document.querySelectorAll("#sellerProfileProducts .seller-product-card").length;
+            document.getElementById("sellerProfileAvailableCount").textContent =
+                `${availableCount} produto(s) disponíveis · ${totalCount} publicados`;
+            mostrarToast("Disponibilidade atualizada. O histórico do produto foi mantido.", "sucesso");
+        } catch (error) {
+            console.error("Não foi possível atualizar a disponibilidade do produto.", error);
+            mostrarToast("Não foi possível atualizar o produto. Tente novamente.", "erro");
+        } finally {
+            availabilityButton.disabled = false;
+        }
+    });
 }
 
 function renderListaAmigosDisponiveis(filtro = "") {
     const lista = document.getElementById("addFriendList");
     const query = filtro.trim().toLowerCase();
-    const amigosNomes = new Set(friendsData.map(item => item.name.toLowerCase()));
+    const amigosUids = new Set(friendsData.map(item => item.uid));
     const visiveis = obterDirectorioUtilizadores().filter(pessoa => {
         const texto = `${pessoa.name} ${pessoa.company} ${pessoa.username}`.toLowerCase();
-        return (!query || texto.includes(query)) && !amigosNomes.has(pessoa.name.toLowerCase());
+        return (!query || texto.includes(query)) && !amigosUids.has(pessoa.uid);
     });
     if (!visiveis.length) {
         lista.innerHTML = `<div class="empty">${query ? "Nenhum utilizador encontrado." : "Não há novos contactos para adicionar."}</div>`;
@@ -1931,28 +2806,70 @@ function renderListaAmigosDisponiveis(filtro = "") {
                         <strong>${escapeHTML(pessoa.name)}</strong>
                         <span>${escapeHTML(pessoa.company || pessoa.username)}</span>
                     </div>
-                    <button type="button" data-add-friend="${escapeHTML(pessoa.name)}" data-company="${escapeHTML(pessoa.company)}" data-username="${escapeHTML(pessoa.username)}">Conversar</button>
+                    ${pessoa.tipo === "vendedor" ? `<button type="button" data-open-directory-profile="${escapeHTML(pessoa.uid)}">Perfil</button>` : ""}
+                    <button type="button" data-add-friend="${escapeHTML(pessoa.uid)}">Conversar</button>
                 </div>
             `).join("");
+    lista.querySelectorAll("[data-open-directory-profile]").forEach(button => {
+        button.addEventListener("click", () => {
+            fecharModalAmigo();
+            openPublicSellerProfile(button.dataset.openDirectoryProfile);
+        });
+    });
     lista.querySelectorAll("[data-add-friend]").forEach(button => {
-        button.addEventListener("click", () => iniciarConversaAmigo(button.dataset.addFriend, button.dataset.company, button.dataset.username));
+        button.addEventListener("click", () => iniciarConversaAmigo(button.dataset.addFriend));
     });
 }
 
-function iniciarConversaAmigo(nome, empresa, username) {
-    if (!friendsData.some(item => item.name === nome)) {
-        friendsData.unshift({ name: nome, company: empresa, username, lastMessage: "Olá, quero conversar." });
-        guardarAmigos();
+async function iniciarConversaAmigo(uid) {
+    const user = window.dimmakoFirebase?.auth.currentUser;
+    if (!user || !uid || user.uid === uid) {
+        mostrarToast("Não foi possível iniciar a conversa com este utilizador.", "erro");
+        return;
     }
-    fecharModalAmigo();
-    const panel = document.querySelector(".chat-panel");
-    panel.classList.add("mobile-open");
-    chatAberto = true;
-    atualizarBotaoPublicarMobile();
-    renderFriends();
-    openChat(nome);
-    document.getElementById("messages").innerHTML = `<div class="message mine">Olá, quero conversar.</div>`;
-    mostrarToast(`Agora podes conversar com ${nome}.`, "sucesso");
+
+    try {
+        await window.dimmakoFirebase.ready;
+        let profile = publicProfiles.find(item => item.uid === uid);
+        if (!profile) {
+            const profileSnapshot = await window.dimmakoFirebase.db.collection("publicProfiles").doc(uid).get();
+            profile = profileSnapshot.exists ? profileSnapshot.data() : null;
+        }
+        if (!profile || profile.uid !== uid || profile.verified !== true || !["cliente", "vendedor"].includes(profile.tipo)) {
+            throw new Error("Este utilizador não tem um perfil Firebase válido.");
+        }
+        const participantUids = [user.uid, uid].sort();
+        const conversationId = participantUids.join("_");
+        const reference = window.dimmakoFirebase.db.collection("conversations").doc(conversationId);
+        const existing = await reference.get();
+        if (!existing.exists) {
+            await reference.set({
+                participantUids,
+                createdBy: user.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        if (!friendsData.some(friend => friend.uid === uid)) {
+            friendsData.push({
+                uid,
+                name: profile.nome || profile.nomeEmpresa || "Utilizador",
+                company: profile.nomeEmpresa || "",
+                username: uid,
+                foto: profile.foto || "",
+                conversationId
+            });
+        }
+        fecharModalAmigo();
+        const panel = document.querySelector(".chat-panel");
+        panel.classList.add("mobile-open");
+        chatAberto = true;
+        atualizarBotaoPublicarMobile();
+        renderFriends();
+        openChat(uid);
+    } catch (error) {
+        console.error("Não foi possível criar a conversa no Firebase.", error);
+        mostrarToast("Não foi possível iniciar a conversa. Verifique as regras do Firestore.", "erro");
+    }
 }
 
 function abrirModalAmigo() {
@@ -1986,34 +2903,64 @@ function setupProfilePhoto() {
     input.addEventListener("change", async () => {
         const ficheiro = input.files && input.files[0];
         if (!ficheiro) return;
-        if (!ficheiro.type.startsWith("image/")) {
-            mostrarToast("Seleccione uma imagem de perfil.", "erro");
+        const tiposPermitidos = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        const user = window.dimmakoFirebase?.auth.currentUser;
+        if (!tiposPermitidos.includes(ficheiro.type) || ficheiro.size <= 0 || ficheiro.size > 10 * 1024 * 1024) {
+            mostrarToast("Use uma imagem JPG, PNG, WebP ou GIF até 10 MB.", "erro");
             input.value = "";
             return;
         }
+        if (!user) {
+            mostrarToast("A sessão expirou. Entre novamente para alterar a foto.", "erro");
+            return;
+        }
+        if (!await imagemComAssinaturaValida(ficheiro)) {
+            mostrarToast("O ficheiro não parece ser uma imagem válida.", "erro");
+            input.value = "";
+            return;
+        }
+
         mostrarToast("A enviar foto de perfil para o ImgBB...", "info");
-        const url = await uploadImagemImgBB(ficheiro);
-        if (!url) {
-            mostrarToast("Não foi possível enviar a foto para o ImgBB.", "erro");
-            input.value = "";
-            return;
-        }
         try {
+            await window.dimmakoFirebase.ready;
+            const url = await uploadImagemImgBB(ficheiro);
+            const privateProfile = await window.dimmakoFirebase.db.collection("profiles").doc(user.uid).get();
+            if (!privateProfile.exists) throw new Error("O perfil autenticado não foi encontrado no Firestore.");
+            const profileData = privateProfile.data();
+            const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+            const profileUpdate = {
+                foto: url,
+                updatedAt: timestamp
+            };
+            const batch = window.dimmakoFirebase.db.batch();
+            batch.update(window.dimmakoFirebase.db.collection("profiles").doc(user.uid), profileUpdate);
+            batch.set(window.dimmakoFirebase.db.collection("publicProfiles").doc(user.uid), {
+                uid: user.uid,
+                tipo: profileData.tipo,
+                nome: profileData.nome || "Utilizador",
+                nomeEmpresa: profileData.nomeEmpresa || "",
+                categoria: profileData.categoria || "",
+                descricao: profileData.descricao || "",
+                foto: url,
+                visible: document.querySelector('[data-setting="publicProfile"]')?.checked !== false,
+                verified: true,
+                updatedAt: timestamp
+            });
+            await batch.commit();
             const session = JSON.parse(localStorage.getItem("dimmakoSessaoActual") || "{}");
             session.foto = url;
             localStorage.setItem("dimmakoSessaoActual", JSON.stringify(session));
-            const contas = JSON.parse(localStorage.getItem("dimmakoContas") || "[]");
-            const idx = contas.findIndex(c => c.identificador === session.identificador);
-            if (idx >= 0) {
-                contas[idx].foto = url;
-                localStorage.setItem("dimmakoContas", JSON.stringify(contas));
-            }
-        } catch (e) { }
-        const nome = document.getElementById("userName").textContent;
-        aplicarAvatar("avatar", url, nome);
-        aplicarAvatar("mobileAvatar", url, nome);
-        aplicarAvatar("profileAvatar", url, nome);
-        mostrarToast("Foto de perfil actualizada.", "sucesso");
+            const nome = document.getElementById("userName").textContent;
+            aplicarAvatar("avatar", url, nome);
+            aplicarAvatar("mobileAvatar", url, nome);
+            aplicarAvatar("profileAvatar", url, nome);
+            mostrarToast("Foto de perfil atualizada.", "sucesso");
+        } catch (error) {
+            console.error("Não foi possível enviar a foto de perfil para o ImgBB ou atualizar o perfil.", error);
+            mostrarToast(error.message || "Não foi possível guardar a foto. Verifique a ligação e tente novamente.", "erro");
+        } finally {
+            input.value = "";
+        }
     });
 }
 
@@ -2084,6 +3031,7 @@ function setupMapFullscreen() {
 }
 
 function initializeScreens() {
+    document.querySelector(".content")?.classList.add("home-view");
     const session = JSON.parse(localStorage.getItem("dimmakoSessaoActual") || "null");
     const profileName = session && (session.nome || session.nomeCompleto || session.nomeEmpresa)
         ? (session.nome || session.nomeCompleto || session.nomeEmpresa)
@@ -2135,6 +3083,7 @@ function initializeScreens() {
     configurarInteracoesPublicacao();
     setupProductPublisher();
     setupAddFriendModal();
+    setupSellerProfile();
     setupProfilePhoto();
     setupMapFullscreen();
     setupMapStyleSwitch();

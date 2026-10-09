@@ -1,0 +1,6 @@
+.env
+.env.*
+.firebase/
+dimmakoapis.txt
+dadosFirebase.text
+/src/js/firebase-config.js

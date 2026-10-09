@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="firebase-app-check-site-key" content="">
     <title>Dimako</title>
     <link rel="stylesheet" href="styles/styles.css">
 </head>
@@ -51,7 +52,7 @@
                 </button>
                 <button type="button" title="Continuar com Apple" onclick="continuarComProvedor('Apple')">
                     <svg viewBox="0 0 24 24" width="22" height="22">
-                        <path fill="#000"
+                        <path fill="#fff"
                             d="M16.365 1.43c0 1.14-.468 2.203-1.213 2.99-.83.86-2.18 1.53-3.28 1.44-.14-1.1.42-2.24 1.17-3.02.83-.87 2.28-1.52 3.32-1.41zm4.36 16.6c-.33.76-.73 1.47-1.2 2.14-.65.94-1.18 1.6-1.6 1.97-.63.6-1.31.91-2.03.92-.52 0-1.15-.15-1.87-.46-.72-.31-1.38-.46-1.99-.46-.64 0-1.32.15-2.05.46-.73.31-1.32.47-1.78.49-.7.03-1.4-.29-2.09-.95-.44-.39-.99-1.07-1.66-2.03-.72-1.03-1.31-2.23-1.78-3.6-.5-1.48-.75-2.91-.75-4.29 0-1.58.34-2.94 1.02-4.08.53-.92 1.24-1.64 2.12-2.18.88-.53 1.83-.81 2.86-.82.55 0 1.27.17 2.17.5.9.34 1.48.51 1.73.51.19 0 .83-.2 1.92-.6 1.03-.37 1.9-.52 2.6-.47 1.92.16 3.36.91 4.32 2.27-1.72 1.04-2.57 2.5-2.55 4.38.02 1.46.55 2.68 1.58 3.64.47.45 1 .8 1.58 1.05-.13.37-.27.72-.42 1.06z" />
                     </svg>
                 </button>
@@ -59,9 +60,9 @@
             <span class="separadorOu">ou</span>
             <div class="divEmailcotinue">
 
-                <input type="text" name="emailOuTelefone" id="email" inputmode="email" maxlength="254"
-                    autocomplete="username" placeholder="Email ou telefone">
-                <label for="email" class="hintCampo">Introduza um e-mail ou telefone válido</label>
+                <input type="email" name="email" id="email" inputmode="email" maxlength="254"
+                    autocomplete="email" placeholder="Email">
+                <label for="email" class="hintCampo">Introduza um endereço de email válido</label>
                 <button type="button" onclick="confirmarEmail()">
                     Confirmar
                 </button>
@@ -98,7 +99,7 @@
                     <input type="text" id="nomeCompletoVendedor" placeholder="Nome Completo">
 
                     <div class="dataEspace">
-                        <label for="dia">Deve ter pelo menos 18 anos de idade.</label>
+                        <label for="dia">Data de nascimento</label>
                         <div>
                             <select name="" id="dia">
                                 <option value="">01</option>
@@ -306,7 +307,7 @@
                     </button>
                     <button type="button" title="Continuar com Apple" onclick="continuarComProvedor('Apple')">
                         <svg viewBox="0 0 24 24" width="22" height="22">
-                            <path fill="#000"
+                            <path fill="#fff"
                                 d="M16.365 1.43c0 1.14-.468 2.203-1.213 2.99-.83.86-2.18 1.53-3.28 1.44-.14-1.1.42-2.24 1.17-3.02.83-.87 2.28-1.52 3.32-1.41zm4.36 16.6c-.33.76-.73 1.47-1.2 2.14-.65.94-1.18 1.6-1.6 1.97-.63.6-1.31.91-2.03.92-.52 0-1.15-.15-1.87-.46-.72-.31-1.38-.46-1.99-.46-.64 0-1.32.15-2.05.46-.73.31-1.32.47-1.78.49-.7.03-1.4-.29-2.09-.95-.44-.39-.99-1.07-1.66-2.03-.72-1.03-1.31-2.23-1.78-3.6-.5-1.48-.75-2.91-.75-4.29 0-1.58.34-2.94 1.02-4.08.53-.92 1.24-1.64 2.12-2.18.88-.53 1.83-.81 2.86-.82.55 0 1.27.17 2.17.5.9.34 1.48.51 1.73.51.19 0 .83-.2 1.92-.6 1.03-.37 1.9-.52 2.6-.47 1.92.16 3.36.91 4.32 2.27-1.72 1.04-2.57 2.5-2.55 4.38.02 1.46.55 2.68 1.58 3.64.47.45 1 .8 1.58 1.05-.13.37-.27.72-.42 1.06z" />
                         </svg>
                     </button>
@@ -335,13 +336,14 @@
         <div class="spinner"></div>
     </div>
     <div id="dimmakoToastContainer" class="toast-container" aria-live="polite"></div>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-app-check-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore-compat.js"></script>
+    <script src="src/js/firebase-config.js"></script>
+    <script src="src/js/configFirebase.js"></script>
+    <script src="src/js/media.js"></script>
     <script src="src/js/index.js"></script>
-
-
-
-
-
-
 
 
 

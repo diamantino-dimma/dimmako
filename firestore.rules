@@ -1,0 +1,492 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInAs(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isRegisteredUser() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    function validProfile(uid) {
+      let profile = request.resource.data;
+      return profile.keys().hasOnly([
+          'uid', 'tipo', 'identificador', 'email', 'nome', 'nomeCompleto',
+          'nomeEmpresa', 'emailEmpresa', 'telefoneEmpresa', 'sexo', 'bi',
+          'dataNasc', 'categoria', 'descricao', 'foto', 'createdAt', 'updatedAt'
+        ])
+        && profile.uid == uid
+        && profile.tipo in ['cliente', 'vendedor']
+        && profile.nome is string
+        && profile.nome.size() <= 100
+        && (!('foto' in profile) || profile.foto == null
+          || (profile.foto is string && profile.foto.size() <= 2048 && profile.foto.matches('https://i\\.ibb\\.co/.*')))
+        && (!('email' in profile) || profile.email == request.auth.token.email);
+    }
+
+    function validPublicProfile(uid) {
+      let profile = request.resource.data;
+      return profile.keys().hasOnly([
+          'uid', 'tipo', 'nome', 'nomeEmpresa', 'categoria', 'descricao',
+          'foto', 'visible', 'verified', 'updatedAt'
+        ])
+        && profile.uid == uid
+        && profile.tipo in ['cliente', 'vendedor']
+        && profile.nome is string
+        && profile.nome.size() > 0
+        && profile.nome.size() <= 100
+        && existsAfter(/databases/$(database)/documents/profiles/$(uid))
+        && profile.verified == true
+        && (!('nomeEmpresa' in profile) || (profile.nomeEmpresa is string && profile.nomeEmpresa.size() <= 100))
+        && (!('categoria' in profile) || (profile.categoria is string && profile.categoria.size() <= 80))
+        && (!('descricao' in profile) || (profile.descricao is string && profile.descricao.size() <= 500))
+        && profile.visible is bool
+        && (!('foto' in profile) || profile.foto == null
+          || (profile.foto is string && profile.foto.size() <= 2048 && profile.foto.matches('https://i\\.ibb\\.co/.*')));
+    }
+
+    function isConversationMember(conversationId) {
+      let conversation = get(/databases/$(database)/documents/conversations/$(conversationId));
+      return request.auth != null
+        && conversation.data.participantUids is list
+        && request.auth.uid in conversation.data.participantUids;
+    }
+
+    function validCallDescription(description, expectedType) {
+      return description is map
+        && description.keys().hasOnly(['type', 'sdp'])
+        && description.type == expectedType
+        && description.sdp is string
+        && description.sdp.size() > 0
+        && description.sdp.size() <= 50000;
+    }
+
+    function validCallCreate() {
+      let call = request.resource.data;
+      let conversation = get(/databases/$(database)/documents/conversations/$(call.conversationId));
+      let callerProfile = get(/databases/$(database)/documents/publicProfiles/$(call.callerUid));
+      let calleeProfile = get(/databases/$(database)/documents/publicProfiles/$(call.calleeUid));
+      return isRegisteredUser()
+        && call.keys().hasOnly([
+          'conversationId', 'participantUids', 'callerUid', 'calleeUid', 'status',
+          'offer', 'answer', 'createdAt', 'updatedAt', 'expiresAt'
+        ])
+        && call.conversationId is string
+        && call.conversationId.matches('^[A-Za-z0-9_-]{1,300}$')
+        && call.participantUids is list
+        && call.participantUids.size() == 2
+        && call.participantUids[0] is string
+        && call.participantUids[1] is string
+        && call.participantUids[0] != call.participantUids[1]
+        && call.participantUids == conversation.data.participantUids
+        && request.auth.uid == call.callerUid
+        && call.calleeUid is string
+        && call.callerUid != call.calleeUid
+        && call.callerUid in call.participantUids
+        && call.calleeUid in call.participantUids
+        && call.status == 'ringing'
+        && validCallDescription(call.offer, 'offer')
+        && call.answer == null
+        && call.createdAt == request.time
+        && call.updatedAt == request.time
+        && call.expiresAt is timestamp
+        && call.expiresAt > request.time
+        && call.expiresAt <= request.time + duration.value(2, 'm')
+        && callerProfile.data.uid == call.callerUid
+        && callerProfile.data.verified == true
+        && calleeProfile.data.uid == call.calleeUid
+        && calleeProfile.data.verified == true
+        && conversation.data.participantUids.size() == 2;
+    }
+
+    function isCallMember() {
+      return isRegisteredUser()
+        && resource.data.participantUids is list
+        && request.auth.uid in resource.data.participantUids;
+    }
+
+    function isCallParticipant(callId) {
+      let call = get(/databases/$(database)/documents/calls/$(callId));
+      return isRegisteredUser()
+        && call.data.participantUids is list
+        && request.auth.uid in call.data.participantUids;
+    }
+
+    function validCallUpdate() {
+      let oldCall = resource.data;
+      let newCall = request.resource.data;
+      let changed = newCall.diff(oldCall).affectedKeys();
+      return isCallMember()
+        && newCall.updatedAt == request.time
+        && ((newCall.status == 'connecting'
+              && oldCall.status == 'ringing'
+              && request.auth.uid == oldCall.calleeUid
+              && validCallDescription(newCall.answer, 'answer')
+              && changed.hasOnly(['answer', 'status', 'updatedAt']))
+          || (newCall.status == 'active'
+              && oldCall.status in ['connecting', 'active']
+              && changed.hasOnly(['status', 'updatedAt']))
+          || (newCall.status in ['rejected', 'cancelled', 'ended', 'failed', 'expired']
+              && newCall.offer == null
+              && newCall.answer == null
+              && changed.hasOnly(['status', 'offer', 'answer', 'updatedAt'])
+              && ((newCall.status == 'rejected'
+                    && oldCall.status == 'ringing'
+                    && request.auth.uid == oldCall.calleeUid)
+                || (newCall.status == 'cancelled'
+                    && oldCall.status == 'ringing'
+                    && request.auth.uid == oldCall.callerUid)
+                || (newCall.status == 'ended'
+                    && oldCall.status in ['connecting', 'active'])
+                || (newCall.status == 'failed'
+                    && oldCall.status in ['ringing', 'connecting', 'active'])
+                || (newCall.status == 'expired'
+                    && oldCall.status == 'ringing'
+                    && request.time >= oldCall.expiresAt))));
+    }
+
+    function validCallInvitation(uid, callId) {
+      let invitation = request.resource.data;
+      let call = getAfter(/databases/$(database)/documents/calls/$(callId));
+      return isRegisteredUser()
+        && invitation.keys().hasOnly(['callId', 'callerUid', 'createdAt'])
+        && invitation.callId == callId
+        && invitation.callerUid == request.auth.uid
+        && invitation.createdAt == request.time
+        && call.data.status == 'ringing'
+        && call.data.calleeUid == uid
+        && call.data.callerUid == request.auth.uid
+        && call.data.callerUid in call.data.participantUids
+        && call.data.calleeUid in call.data.participantUids;
+    }
+
+    function validIceCandidate() {
+      let candidate = request.resource.data;
+      return candidate.keys().hasOnly(['candidate', 'sdpMid', 'sdpMLineIndex', 'createdAt'])
+        && candidate.candidate is string
+        && candidate.candidate.size() > 0
+        && candidate.candidate.size() <= 4096
+        && (candidate.sdpMid == null
+          || (candidate.sdpMid is string && candidate.sdpMid.size() <= 128))
+        && (candidate.sdpMLineIndex == null
+          || (candidate.sdpMLineIndex is int
+            && candidate.sdpMLineIndex >= 0
+            && candidate.sdpMLineIndex <= 32))
+        && candidate.createdAt == request.time;
+    }
+
+    function validPostNotification(recipientUid, notification) {
+      let post = getAfter(/databases/$(database)/documents/posts/$(notification.postId));
+      return post.data.authorId == recipientUid
+        && ((notification.type == 'like'
+            && !exists(/databases/$(database)/documents/posts/$(notification.postId)/likes/$(request.auth.uid))
+            && existsAfter(/databases/$(database)/documents/posts/$(notification.postId)/likes/$(request.auth.uid))
+            && getAfter(/databases/$(database)/documents/posts/$(notification.postId)/likes/$(request.auth.uid)).data.uid == request.auth.uid)
+          || (notification.type == 'comment'
+            && post.data.lastCommentId is string
+            && getAfter(/databases/$(database)/documents/posts/$(notification.postId)/comments/$(post.data.lastCommentId)).data.authorUid == request.auth.uid));
+    }
+
+    function validMessageNotification(recipientUid, notification) {
+      let conversation = get(/databases/$(database)/documents/conversations/$(notification.conversationId));
+      return conversation.data.participantUids is list
+        && recipientUid in conversation.data.participantUids
+        && request.auth.uid in conversation.data.participantUids
+        && getAfter(/databases/$(database)/documents/conversations/$(notification.conversationId)/messages/$(notification.messageId)).data.senderId == request.auth.uid;
+    }
+
+    function validNotification(recipientUid) {
+      let notification = request.resource.data;
+      return request.auth != null
+        && recipientUid != request.auth.uid
+        && notification.keys().hasOnly([
+          'type', 'actorUid', 'actorName', 'postId', 'conversationId',
+          'messageId', 'createdAt', 'read'
+        ])
+        && notification.actorUid == request.auth.uid
+        && notification.actorName is string
+        && notification.actorName.size() <= 100
+        && notification.createdAt == request.time
+        && notification.read == false
+        && ((notification.type in ['like', 'comment']
+            && notification.postId is string
+            && notification.postId.matches('^[A-Za-z0-9_-]{1,120}$')
+            && notification.conversationId == ''
+            && notification.messageId == ''
+            && validPostNotification(recipientUid, notification))
+          || (notification.type == 'message'
+            && notification.postId == ''
+            && notification.conversationId is string
+            && notification.conversationId.matches('^[A-Za-z0-9_-]{1,300}$')
+            && notification.messageId is string
+            && notification.messageId.matches('^[A-Za-z0-9_-]{1,120}$')
+            && validMessageNotification(recipientUid, notification)));
+    }
+
+    function validPostMediaItem(item) {
+      return item is map
+        && item.keys().hasOnly(['type', 'src'])
+        && item.type == 'image'
+        && item.src is string
+        && item.src.size() <= 2048
+        && item.src.matches('https://i\\.ibb\\.co/.*');
+    }
+
+    function validPostMedia(media) {
+      return media is list
+        && media.size() > 0
+        && media.size() <= 4
+        && validPostMediaItem(media[0])
+        && (media.size() < 2 || validPostMediaItem(media[1]))
+        && (media.size() < 3 || validPostMediaItem(media[2]))
+        && (media.size() < 4 || validPostMediaItem(media[3]));
+    }
+
+    function validPost(uid) {
+      let post = request.resource.data;
+      let seller = get(/databases/$(database)/documents/profiles/$(uid));
+      return seller.data.tipo == 'vendedor'
+        && post.keys().hasOnly([
+          'authorId', 'name', 'authorName', 'companyName', 'category', 'text',
+          'title', 'price', 'delivery', 'media', 'likes', 'comments',
+          'available', 'createdAt'
+        ])
+        && post.authorId == uid
+        && post.name is string
+        && post.name.size() > 0
+        && post.name.size() <= 100
+        && post.authorName is string
+        && post.authorName.size() <= 100
+        && post.companyName is string
+        && post.companyName.size() <= 100
+        && post.category is string
+        && post.category.size() > 0
+        && post.category.size() <= 80
+        && post.title is string
+        && post.title.size() >= 2
+        && post.title.size() <= 120
+        && post.text is string
+        && post.text.size() >= 8
+        && post.text.size() <= 2000
+        && post.price is number
+        && post.price >= 0
+        && post.delivery is map
+        && post.delivery.keys().hasOnly(['municipality', 'outsideMunicipality', 'outsideLuanda'])
+        && post.delivery.municipality is number
+        && post.delivery.outsideMunicipality is number
+        && post.delivery.outsideLuanda is number
+        && post.delivery.municipality >= 0
+        && post.delivery.outsideMunicipality >= 0
+        && post.delivery.outsideLuanda >= 0
+        && validPostMedia(post.media)
+        && post.likes is int
+        && post.likes >= 0
+        && post.comments is int
+        && post.comments >= 0
+        && post.available == true
+        && post.createdAt == request.time;
+    }
+
+    match /profiles/{uid} {
+      allow get: if signedInAs(uid);
+      allow list: if false;
+      allow create: if signedInAs(uid) && validProfile(uid);
+      allow update: if signedInAs(uid)
+        && validProfile(uid)
+        && request.resource.data.tipo == resource.data.tipo
+        && request.resource.data.email == resource.data.email;
+      allow delete: if false;
+    }
+
+    match /publicProfiles/{uid} {
+      allow get: if request.auth != null && resource.data.verified == true;
+      allow list: if request.auth != null
+        && resource.data.visible == true
+        && resource.data.verified == true;
+      allow create: if signedInAs(uid) && validPublicProfile(uid);
+      allow update: if signedInAs(uid)
+        && validPublicProfile(uid)
+        && request.resource.data.tipo == resource.data.tipo;
+      allow delete: if false;
+    }
+
+    match /posts/{postId} {
+      allow get, list: if request.auth != null;
+      allow create: if signedInAs(request.resource.data.authorId)
+        && validPost(request.auth.uid);
+      allow update: if request.auth != null && (
+        (resource.data.authorId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['available', 'availabilityUpdatedAt'])
+          && request.resource.data.available is bool
+          && request.resource.data.availabilityUpdatedAt == request.time)
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+          && request.resource.data.likes == resource.data.likes + 1
+          && !exists(/databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid))
+          && existsAfter(/databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid))
+          && getAfter(/databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid)).data.uid == request.auth.uid)
+        || (request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['comments', 'lastCommentId'])
+          && request.resource.data.comments == resource.data.comments + 1
+          && request.resource.data.lastCommentId is string
+          && !exists(/databases/$(database)/documents/posts/$(postId)/comments/$(request.resource.data.lastCommentId))
+          && existsAfter(/databases/$(database)/documents/posts/$(postId)/comments/$(request.resource.data.lastCommentId))
+          && getAfter(/databases/$(database)/documents/posts/$(postId)/comments/$(request.resource.data.lastCommentId)).data.authorUid == request.auth.uid)
+      );
+      allow delete: if false;
+
+      match /likes/{uid} {
+        allow get, list: if request.auth != null;
+        allow create: if signedInAs(uid)
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'createdAt'])
+          && request.resource.data.uid == uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 100
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+
+      match /comments/{commentId} {
+        allow get, list: if request.auth != null;
+        allow create: if request.auth != null
+          && request.resource.data.keys().hasOnly(['authorUid', 'name', 'text', 'createdAt'])
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 100
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+
+      match /ratings/{uid} {
+        allow get, list: if request.auth != null;
+        allow create, update: if signedInAs(uid)
+          && request.resource.data.keys().hasOnly(['uid', 'stars', 'updatedAt'])
+          && request.resource.data.uid == uid
+          && request.resource.data.stars is int
+          && request.resource.data.stars >= 1
+          && request.resource.data.stars <= 5
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+
+        match /history/{ratingId} {
+          allow get, list: if request.auth != null;
+          allow create: if signedInAs(uid)
+            && request.resource.data.keys().hasOnly(['uid', 'stars', 'createdAt'])
+            && request.resource.data.uid == uid
+            && request.resource.data.stars is int
+            && request.resource.data.stars >= 1
+            && request.resource.data.stars <= 5
+            && request.resource.data.createdAt == request.time;
+          allow update, delete: if false;
+        }
+      }
+    }
+
+    match /profiles/{uid}/privateData/{recordId} {
+      allow get, list: if signedInAs(uid);
+      allow create, update: if signedInAs(uid)
+        && request.resource.data.keys().hasOnly(['value', 'updatedAt', 'importedAt'])
+        && request.resource.data.value != null;
+      allow delete: if false;
+    }
+
+    match /profiles/{uid}/sales/{saleId} {
+      allow get, list: if signedInAs(uid);
+      allow create: if signedInAs(uid)
+        && request.resource.data.keys().hasOnly(['legacyRecord', 'importedAt'])
+        && request.resource.data.legacyRecord is map
+        && request.resource.data.importedAt == request.time;
+      allow update: if signedInAs(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['legacyRecord'])
+        && request.resource.data.legacyRecord is map;
+      allow delete: if false;
+    }
+
+    match /profiles/{uid}/notifications/{notificationId} {
+      allow get, list: if signedInAs(uid);
+      allow create: if validNotification(uid);
+      allow update: if signedInAs(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt'])
+        && request.resource.data.read == true
+        && request.resource.data.readAt == request.time;
+      allow delete: if false;
+    }
+
+    match /conversations/{conversationId} {
+      allow get, list: if request.auth != null
+        && resource.data.participantUids is list
+        && request.auth.uid in resource.data.participantUids;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['participantUids', 'createdBy', 'createdAt'])
+        && request.resource.data.participantUids is list
+        && request.resource.data.participantUids.size() == 2
+        && request.resource.data.participantUids[0] is string
+        && request.resource.data.participantUids[1] is string
+        && request.resource.data.participantUids[0] != request.resource.data.participantUids[1]
+        && request.auth.uid in request.resource.data.participantUids
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && get(/databases/$(database)/documents/publicProfiles/$(request.resource.data.participantUids[0])).data.verified == true
+        && get(/databases/$(database)/documents/publicProfiles/$(request.resource.data.participantUids[1])).data.verified == true;
+      allow update, delete: if false;
+
+      match /messages/{messageId} {
+        allow get, list: if isConversationMember(conversationId);
+        allow create: if isConversationMember(conversationId)
+          && request.resource.data.keys().hasOnly(['senderId', 'text', 'createdAt'])
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+
+    match /calls/{callId} {
+      allow get, list: if isCallMember();
+      allow create: if validCallCreate();
+      allow update: if validCallUpdate();
+      allow delete: if false;
+
+      match /callerCandidates/{candidateId} {
+        allow get, list: if isCallParticipant(callId);
+        allow create: if isCallParticipant(callId)
+          && request.auth.uid == get(/databases/$(database)/documents/calls/$(callId)).data.callerUid
+          && get(/databases/$(database)/documents/calls/$(callId)).data.status in ['ringing', 'connecting', 'active']
+          && validIceCandidate();
+        allow delete: if isCallParticipant(callId)
+          && get(/databases/$(database)/documents/calls/$(callId)).data.status in ['rejected', 'cancelled', 'ended', 'failed', 'expired'];
+        allow update: if false;
+      }
+
+      match /calleeCandidates/{candidateId} {
+        allow get, list: if isCallParticipant(callId);
+        allow create: if isCallParticipant(callId)
+          && request.auth.uid == get(/databases/$(database)/documents/calls/$(callId)).data.calleeUid
+          && get(/databases/$(database)/documents/calls/$(callId)).data.status in ['connecting', 'active']
+          && validIceCandidate();
+        allow delete: if isCallParticipant(callId)
+          && get(/databases/$(database)/documents/calls/$(callId)).data.status in ['rejected', 'cancelled', 'ended', 'failed', 'expired'];
+        allow update: if false;
+      }
+    }
+
+    match /profiles/{uid}/callInvitations/{callId} {
+      allow get, list: if signedInAs(uid);
+      allow create: if validCallInvitation(uid, callId);
+      allow delete: if signedInAs(uid) && resource.data.callId == callId;
+      allow update: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

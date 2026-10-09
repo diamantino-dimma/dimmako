@@ -4,12 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="firebase-app-check-site-key" content="">
     <title>Dimma | Início</title>
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
     <link rel="stylesheet" href="styles/home.css?v=post-actions-2">
 </head>
 
-<body>
+<body class="firebase-auth-pending">
     <div class="app">
         <aside class="sidebar">
             <div class="brand">
@@ -393,12 +394,6 @@
                         <small class="field-help" id="btIbanCounter">0 de 21 caracteres</small>
                     </div>
             </div>
-            <footer class="product-form-footer">
-                <button class="screen-action product-submit" id="submitBankTransfer" type="submit" disabled>
-                    <span class="submit-label">Guardar dados bancários</span>
-                    <span class="btn-spinner" hidden></span>
-                </button>
-            </footer>
             </form>
             </section>
             </section>
@@ -449,7 +444,7 @@
                     <label class="setting-row">
                         <div>
                             <strong>Perfil público</strong>
-                            <p>Qualquer pessoa pode ver o seu perfil</p>
+                            <p>Permite aparecer no diretório e disponibiliza o perfil público do vendedor.</p>
                         </div>
                         <span class="switch">
                             <input type="checkbox" data-setting="publicProfile" checked>
@@ -542,7 +537,8 @@
                         <div class="avatar" id="chatAvatar">--</div><strong id="chatName">Selecione um
                             amigo</strong>
                         <div class="conversation-actions">
-                            <button class="call-btn" id="callButton" type="button" aria-label="Chamar" title="Chamar">
+                            <button class="call-btn" id="callButton" type="button"
+                                aria-label="Iniciar chamada de voz" title="Iniciar chamada de voz">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path
@@ -767,8 +763,98 @@
         </section>
     </div>
 
+    <div class="publish-modal" id="sellerProfileModal" aria-hidden="true">
+        <section class="publish-dialog seller-profile-dialog" role="dialog" aria-modal="true"
+            aria-labelledby="sellerProfileTitle">
+            <header class="publish-dialog-header">
+                <h2 id="sellerProfileTitle">Perfil público do vendedor</h2>
+                <button class="modal-close" id="closeSellerProfile" type="button" aria-label="Fechar perfil">
+                    <svg viewBox="0 0 24 24">
+                        <path d="m18 6-12 12M6 6l12 12" />
+                    </svg>
+                </button>
+            </header>
+            <div class="seller-profile-summary" id="sellerProfileSummary">
+                <p class="empty">A carregar perfil...</p>
+            </div>
+            <div class="seller-profile-products-heading">
+                <h3>Produtos publicados</h3>
+                <span id="sellerProfileProductCount">0 produtos</span>
+            </div>
+            <div class="seller-profile-products" id="sellerProfileProducts"></div>
+        </section>
+    </div>
+
+    <div class="voice-call-modal" id="voiceCallModal" aria-hidden="true">
+        <section class="voice-call-dialog" role="dialog" aria-modal="true" aria-labelledby="voiceCallName">
+            <div class="voice-call-indicator" aria-hidden="true"></div>
+            <div class="voice-call-avatar" id="voiceCallAvatar"></div>
+            <h2 id="voiceCallName"></h2>
+            <p class="voice-call-status" id="voiceCallStatus" role="status" aria-live="polite"></p>
+            <p class="voice-call-duration" id="voiceCallDuration" hidden>00:00</p>
+            <audio id="voiceCallRemoteAudio" autoplay playsinline aria-label="Áudio remoto da chamada"></audio>
+            <div class="voice-call-actions">
+                <button class="voice-call-action accept" id="voiceAcceptButton" type="button"
+                    data-voice-action="incoming" hidden>Atender</button>
+                <button class="voice-call-action reject" id="voiceRejectButton" type="button"
+                    data-voice-action="incoming" hidden>Recusar</button>
+                <button class="voice-call-action mute" id="voiceMuteButton" type="button"
+                    data-voice-action="active" hidden>Silenciar microfone</button>
+                <button class="voice-call-action end" id="voiceEndButton" type="button"
+                    data-voice-action="calling connecting active" hidden>Desligar</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-app-check-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore-compat.js"></script>
+    <script src="src/js/firebase-config.js"></script>
+    <script src="src/js/configFirebase.js"></script>
+    <script src="src/js/media.js"></script>
+    <script src="src/js/firestore-data.js"></script>
+    <script src="src/js/voice-calls.js?v=voice-calls-1"></script>
     <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
-    <script src="src/js/app.js?v=post-actions-2"></script>
+    <script src="src/js/app.js?v=firebase-calls-1"></script>
+    <script>
+        window.dimmakoFirebase.ready.then(() => {
+            window.dimmakoFirebase.auth.onAuthStateChanged(async user => {
+                if (!user) {
+                    localStorage.removeItem("dimmakoSessaoActual");
+                    window.location.replace("index.html");
+                    return;
+                }
+
+                try {
+                    const profileRef = window.dimmakoFirebase.db.collection("profiles").doc(user.uid);
+                    const profileSnapshot = await profileRef.get();
+                    if (!profileSnapshot.exists) {
+                        await window.dimmakoFirebase.auth.signOut();
+                        window.location.replace("index.html");
+                        return;
+                    }
+
+                    const profile = profileSnapshot.data();
+                    localStorage.setItem("dimmakoSessaoActual", JSON.stringify({
+                        ...profile,
+                        uid: user.uid,
+                        email: user.email || profile.email || "",
+                        identificador: user.email || profile.identificador || ""
+                    }));
+                    if (typeof setupSession === "function") setupSession();
+                    document.body.classList.remove("firebase-auth-pending");
+                } catch (error) {
+                    console.error("Não foi possível carregar o perfil Firebase.", error);
+                    await window.dimmakoFirebase.auth.signOut();
+                    window.location.replace("index.html");
+                }
+            });
+        }).catch(error => {
+            console.error("Não foi possível inicializar o Firebase.", error);
+            window.location.replace("index.html");
+        });
+    </script>
 </body>
 
 </html>

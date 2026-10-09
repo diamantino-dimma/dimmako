@@ -1035,7 +1035,7 @@ button {
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {
-    border-color: #f4b28f;
+    border-color: transparent;
     box-shadow: 0 0 0 3px rgba(237, 107, 47, .12)
 }
 
@@ -1294,7 +1294,7 @@ button {
 }
 
 .post-comment-form input:focus {
-    border-color: var(--orange);
+    border-color: transparent;
     outline: 2px solid color-mix(in srgb, var(--orange) 20%, transparent);
 }
 
@@ -1450,7 +1450,7 @@ button {
 
 .friend-search:focus,
 .chat-search:focus-within {
-    border-color: var(--line);
+    border-color: transparent;
     box-shadow: none;
     background: transparent
 }
@@ -1567,7 +1567,7 @@ button {
 .add-friend-search:focus,
 .add-friend-search:focus-within {
     background: transparent;
-    border-color: var(--line);
+    border-color: transparent;
     box-shadow: none
 }
 
@@ -1788,6 +1788,162 @@ button {
     stroke-linejoin: round;
     stroke-width: 2;
     width: 14px
+}
+
+.voice-call-modal {
+    align-items: center;
+    background: rgb(5 10 18 / 72%);
+    display: none;
+    inset: 0;
+    justify-content: center;
+    padding: 20px;
+    position: fixed;
+    z-index: 1200
+}
+
+.voice-call-modal.open {
+    display: flex
+}
+
+.voice-call-dialog {
+    align-items: center;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: 0 24px 80px rgb(0 0 0 / 30%);
+    color: var(--dark);
+    display: flex;
+    flex-direction: column;
+    max-width: 390px;
+    min-height: 330px;
+    overflow: hidden;
+    padding: 36px 28px 28px;
+    position: relative;
+    text-align: center;
+    width: min(100%, 390px)
+}
+
+.voice-call-indicator {
+    animation: voice-call-pulse 1.8s ease-out infinite;
+    background: #22c55e;
+    border-radius: 50%;
+    height: 10px;
+    position: absolute;
+    right: 24px;
+    top: 24px;
+    width: 10px
+}
+
+.voice-call-avatar {
+    align-items: center;
+    background: color-mix(in srgb, var(--orange) 16%, var(--white));
+    border: 3px solid color-mix(in srgb, var(--orange) 40%, var(--white));
+    border-radius: 50%;
+    color: var(--orange);
+    display: flex;
+    font-size: 28px;
+    font-weight: 700;
+    height: 112px;
+    justify-content: center;
+    overflow: hidden;
+    width: 112px
+}
+
+.voice-call-avatar img {
+    height: 100%;
+    object-fit: cover;
+    width: 100%
+}
+
+.voice-call-dialog h2 {
+    font-size: 20px;
+    margin: 20px 0 4px;
+    max-width: 100%;
+    overflow-wrap: anywhere
+}
+
+.voice-call-status {
+    color: var(--muted);
+    font-size: 14px;
+    min-height: 22px;
+    margin: 4px 0
+}
+
+.voice-call-duration {
+    color: var(--dark);
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    margin: 4px 0
+}
+
+.voice-call-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+    width: 100%
+}
+
+.voice-call-action {
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    min-height: 48px;
+    min-width: 112px;
+    padding: 0 20px;
+    transition: filter .18s ease, transform .18s ease
+}
+
+.voice-call-action:hover:not(:disabled) {
+    filter: brightness(.94);
+    transform: translateY(-1px)
+}
+
+.voice-call-action:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--orange) 60%, transparent);
+    outline-offset: 3px
+}
+
+.voice-call-action:disabled {
+    cursor: wait;
+    opacity: .65
+}
+
+.voice-call-action[hidden] {
+    display: none
+}
+
+.voice-call-action.accept {
+    background: #15803d
+}
+
+.voice-call-action.reject,
+.voice-call-action.end {
+    background: #dc2626
+}
+
+.voice-call-action.mute {
+    background: #475569
+}
+
+@keyframes voice-call-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgb(34 197 94 / 45%)
+    }
+
+    70% {
+        box-shadow: 0 0 0 12px rgb(34 197 94 / 0%)
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgb(34 197 94 / 0%)
+    }
 }
 
 .share-location {
@@ -2210,7 +2366,7 @@ button {
 }
 
 .map-search:focus-within {
-    border-color: var(--orange);
+    border-color: transparent;
     box-shadow: 0 0 0 3px rgba(237, 107, 47, .16)
 }
 
@@ -2745,7 +2901,7 @@ body.dark-theme .map-style-switch button.active {
 }
 
 .history-search-wrap input:focus {
-    border-color: var(--orange);
+    border-color: transparent;
 }
 
 .settings-list {
@@ -2896,9 +3052,9 @@ body.dark-theme .map-style-switch button.active {
 
 .form-field input:focus,
 .form-field textarea:focus {
-    border-color: var(--orange);
+    border-color: transparent;
     box-shadow: 0 0 0 3px rgba(230, 112, 48, 0.12);
-    outline: none
+    outline: none;
 }
 
 .form-field textarea {
@@ -2914,6 +3070,23 @@ body.dark-theme .map-style-switch button.active {
 #pagePerfil .form-field,
 #pagePerfil .profile-actions {
     max-width: 760px
+}
+
+#pagePerfil>.screen-heading,
+#pagePerfil>.profile-summary,
+#pagePerfil>.form-field,
+#pagePerfil>.profile-actions {
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto
+}
+
+#pageConfiguracoes>.screen-heading,
+#pageConfiguracoes>.settings-list,
+#pageConfiguracoes>.settings-actions {
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto
 }
 
 .settings-actions,
@@ -3244,7 +3417,7 @@ body.dark-theme .map-style-switch button.active {
     }
 
     .publish-button {
-        display: none
+        display: none !important
     }
 
     .content {
@@ -3279,7 +3452,7 @@ body.dark-theme .map-style-switch button.active {
     .mobile-nav button {
         align-items: center;
         background: transparent;
-        border: 0;
+        border: none;
         color: var(--muted);
         display: flex;
         flex-direction: column;
@@ -3401,6 +3574,26 @@ body.dark-theme .map-style-switch button.active {
     .conversation-title {
         flex: 0 0 auto;
         min-height: 58px
+    }
+
+    .voice-call-modal {
+        padding: 14px
+    }
+
+    .voice-call-dialog {
+        border-radius: 20px;
+        min-height: 300px;
+        padding: 32px 20px 22px
+    }
+
+    .voice-call-avatar {
+        height: 96px;
+        width: 96px
+    }
+
+    .voice-call-action {
+        flex: 1 1 40%;
+        min-height: 50px
     }
 
     .call-btn span {
@@ -3550,6 +3743,14 @@ body.dark-theme .map-style-switch button.active {
 
     .content {
         padding: 160px 12px 16px
+    }
+
+    .content:not(.home-view) {
+        padding-top: 72px
+    }
+
+    .content.home-view {
+        padding-top: 160px
     }
 
     .feed {
@@ -3743,13 +3944,13 @@ body.dark-theme .map-style-switch button.active {
 
 /* ---- Tema Escuro (Dark Mode) ---- */
 body.dark-theme {
-    --bg: #111317;
-    --white: #1a1d24;
+    --bg: #000;
+    --white: #080808;
     --dark: #f0f2f5;
     --muted: #9aa0a6;
-    --line: #2d323b;
+    --line: #262626;
     --shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
-    background: #111317;
+    background: #000;
     color: #f0f2f5;
     color-scheme: dark;
 }
@@ -3851,7 +4052,7 @@ body.dark-theme select option {
 body.dark-theme input:focus,
 body.dark-theme select:focus,
 body.dark-theme textarea:focus {
-    border-color: #de6706 !important;
+    border-color: transparent !important;
     box-shadow: 0 0 0 3px rgba(222, 103, 6, 0.25) !important;
     outline: none;
 }
@@ -4084,9 +4285,9 @@ body.dark-theme .message-form .send {
 }
 
 body.dark-theme .mobile-chat-close {
-    background: #1a1d24;
-    border-bottom-color: #2d323b;
-    color: #f08c3a;
+    background: #000;
+    border-bottom-color: #262626;
+    color: #fff;
 }
 
 body.dark-theme .filter-arrow {
@@ -4166,4 +4367,358 @@ select.is-invalid,
 textarea.is-invalid {
     border-color: #dc3545 !important;
     box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2) !important;
+}
+
+:root {
+    --glass-surface: rgba(0, 0, 0, .76);
+    --glass-border: rgba(255, 255, 255, .13);
+    --glass-highlight: rgba(255, 255, 255, .12);
+    --glass-shadow: 0 18px 42px rgba(0, 0, 0, .38);
+}
+
+body:not(.dark-theme) {
+    --glass-surface: rgba(255, 255, 255, .68);
+    --glass-border: rgba(255, 255, 255, .76);
+    --glass-highlight: rgba(255, 255, 255, .88);
+    --glass-shadow: 0 18px 42px rgba(36, 42, 50, .1);
+    background: radial-gradient(ellipse at 4% 0, rgba(237, 107, 47, .1), transparent 38%), #f1f3f5;
+}
+
+body.dark-theme {
+    --bg: #000;
+    --white: #080808;
+    --line: #262626;
+    --glass-surface: rgba(0, 0, 0, .76);
+    --glass-border: rgba(255, 255, 255, .13);
+    --glass-highlight: rgba(255, 255, 255, .12);
+    --glass-shadow: 0 18px 42px rgba(0, 0, 0, .38);
+    background: radial-gradient(ellipse at 95% 0, rgba(237, 107, 47, .1), transparent 34%), #000;
+}
+
+.sidebar,
+.topbar,
+.empty,
+.chat-panel,
+.mobile-nav,
+.post,
+.publish-dialog,
+.sales-stat,
+.chart-section,
+.history-section,
+.payment-card,
+.settings-list,
+.notification-item,
+.profile-summary,
+.chat-menu,
+.map-origin,
+.map-locate-btn,
+.map-fullscreen-btn,
+.map-search,
+.search,
+.friend-search,
+.message-form,
+.period-switch,
+.history-filters {
+    background: var(--glass-surface) !important;
+    border-color: var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-highlight), var(--glass-shadow);
+    backdrop-filter: blur(18px) saturate(155%);
+    -webkit-backdrop-filter: blur(18px) saturate(155%);
+}
+
+.filter-track button:not(.active),
+.history-filters button:not(.active),
+.period-switch button:not(.active),
+.post-engagement button,
+.map-style-switch button {
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+    backdrop-filter: blur(12px) saturate(145%);
+    -webkit-backdrop-filter: blur(12px) saturate(145%);
+}
+
+.filter-track button.active,
+.history-filters button.active,
+.period-switch button.active {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 6px 18px rgba(237, 107, 47, .24);
+}
+
+.post-actions .btn-buy,
+.publish-button,
+.screen-action,
+.product-submit,
+.message-form .send,
+.mobile-floating-publish {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 22px rgba(237, 107, 47, .2);
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea,
+.search input,
+.friend-search,
+.message-form input,
+.map-search,
+.sales-toolbar input {
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+    backdrop-filter: blur(12px) saturate(135%);
+    -webkit-backdrop-filter: blur(12px) saturate(135%);
+}
+
+.message:not(.mine) {
+    background: var(--glass-surface);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-highlight), 0 8px 20px rgba(0, 0, 0, .12);
+    backdrop-filter: blur(14px) saturate(145%);
+    -webkit-backdrop-filter: blur(14px) saturate(145%);
+}
+
+body input:focus,
+body select:focus,
+body textarea:focus,
+body .form-field input:focus,
+body .form-field select:focus,
+body .form-field textarea:focus,
+body.dark-theme input:focus,
+body.dark-theme select:focus,
+body.dark-theme textarea:focus {
+    border-color: var(--glass-border) !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+body input:focus-visible,
+body select:focus-visible,
+body textarea:focus-visible {
+    outline: 1px solid rgba(128, 128, 128, .45) !important;
+    outline-offset: 2px;
+}
+
+.post-comment-form input:focus,
+.map-search:focus-within,
+.chat-search:focus-within,
+.add-friend-search:focus-within,
+.history-search-wrap:focus-within {
+    border-color: var(--glass-border) !important;
+    box-shadow: none !important;
+}
+
+.switch input:focus-visible+.slider {
+    box-shadow: 0 0 0 1px rgba(128, 128, 128, .45);
+}
+
+body.dark-theme .main {
+    background: transparent !important;
+}
+
+body.dark-theme input:not([type="checkbox"]):not([type="radio"]),
+body.dark-theme select,
+body.dark-theme textarea,
+body.dark-theme select option {
+    background-color: #050505 !important;
+    border-color: rgba(255, 255, 255, .14) !important;
+}
+
+body.dark-theme .filter-strip button:not(.active),
+body.dark-theme .filter-track button:not(.active),
+body.dark-theme .history-filters button:not(.active),
+body.dark-theme .period-switch button:not(.active),
+body.dark-theme .filter-arrow,
+body.dark-theme .map-locate-btn:not(.active),
+body.dark-theme .share-location,
+body.dark-theme .friend-item:hover,
+body.dark-theme .friend-item.active,
+body.dark-theme .friend:hover,
+body.dark-theme .friend.selected,
+body.dark-theme #addFriendList>div,
+body.dark-theme .conversation,
+body.dark-theme .messages,
+body.dark-theme .message:not(.mine),
+body.dark-theme .mobile-chat-close,
+body.dark-theme .media-upload-card,
+body.dark-theme .delivery-rates,
+body.dark-theme .product-cancel,
+body.dark-theme .btn-cancelar,
+body.dark-theme .toast,
+body.dark-theme .maplibregl-ctrl-group,
+body.dark-theme .maplibregl-ctrl-group button,
+body.dark-theme .maplibregl-popup-content,
+body.dark-theme .chat-menu {
+    background: rgba(0, 0, 0, .88) !important;
+    border-color: rgba(255, 255, 255, .13) !important;
+}
+
+body.dark-theme #friendSearch {
+    background: #050505 !important;
+    border-color: rgba(255, 255, 255, .14) !important;
+    color: #f0f2f5 !important;
+}
+
+body.dark-theme input:not([type="checkbox"]):not([type="radio"]),
+body.dark-theme select,
+body.dark-theme textarea {
+    background-color: #000 !important;
+    border: 1px solid #242424 !important;
+    box-shadow: inset 0 1px rgba(255, 255, 255, .05), 0 0 0 1px #000, 0 0 0 2px #191919 !important;
+    color: #f0f2f5 !important;
+    color-scheme: dark;
+}
+
+body.dark-theme #addFriendSearchInput,
+body.dark-theme #mapSearch,
+body.dark-theme #historySearch,
+body.dark-theme #postSearch,
+body.dark-theme #friendSearch,
+body.dark-theme #messageInput,
+body.dark-theme #productName,
+body.dark-theme #productCategory,
+body.dark-theme #productPrice,
+body.dark-theme #productDescription,
+body.dark-theme #deliveryMunicipality,
+body.dark-theme #deliveryOutsideMunicipality,
+body.dark-theme #deliveryOutsideLuanda,
+body.dark-theme #buyCustomerName,
+body.dark-theme #buyCustomerPhone,
+body.dark-theme #buyDeliveryAddress,
+body.dark-theme #buyDeliveryZone,
+body.dark-theme #profileNameInput,
+body.dark-theme #profileEmailInput,
+body.dark-theme #profileCompanyInput,
+body.dark-theme #profileBioInput {
+    background: #000 !important;
+    border: 1px solid #242424 !important;
+    box-shadow: inset 0 1px rgba(255, 255, 255, .05), 0 0 0 1px #000, 0 0 0 2px #191919 !important;
+    color: #f0f2f5 !important;
+}
+
+body.dark-theme button:not(.screen-action):not(.publish-button):not(.btn-buy):not(.product-submit):not(.mobile-floating-publish):not(.send):not(.active):not([disabled]) {
+    background-color: #050505 !important;
+    box-shadow: inset 0 1px rgba(255, 255, 255, .05), 0 0 0 1px #000, 0 0 0 2px #191919 !important;
+}
+
+@media (min-width: 769px) {
+
+    #pageConfiguracoes.page-screen,
+    #pagePerfil.page-screen {
+        max-width: 980px;
+        width: 100%;
+        margin-right: auto;
+    }
+}
+
+button {
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.seller-profile-link {
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.seller-profile-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.seller-profile-dialog {
+    width: min(780px, calc(100vw - 32px));
+    max-height: min(88vh, 900px);
+    overflow: auto;
+}
+
+.seller-profile-summary {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: center;
+    padding: 20px 0;
+}
+
+.seller-profile-summary .avatar {
+    width: 72px;
+    height: 72px;
+}
+
+.seller-profile-summary h3,
+.seller-profile-summary p {
+    margin: 4px 0;
+}
+
+.seller-profile-products-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.seller-profile-products-heading h3 {
+    margin: 0;
+}
+
+.seller-profile-products {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.seller-product-card {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--glass-surface);
+}
+
+.seller-product-card .post-media-item img {
+    width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+}
+
+.seller-product-card-content {
+    padding: 12px;
+}
+
+.seller-product-card-content h4,
+.seller-product-card-content p {
+    margin: 0 0 8px;
+}
+
+.seller-product-status {
+    display: inline-block;
+    margin-bottom: 8px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.seller-product-status.unavailable {
+    color: var(--muted);
+}
+
+.seller-product-availability {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--line) !important;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+@media (max-width: 600px) {
+    .seller-profile-dialog {
+        width: calc(100vw - 20px);
+        padding: 18px;
+    }
+
+    .seller-profile-products {
+        grid-template-columns: 1fr;
+    }
 }

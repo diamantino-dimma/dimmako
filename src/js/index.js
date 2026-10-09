@@ -11,6 +11,10 @@ if (localStorage.getItem("dimmakoTema") !== "claro") document.body.classList.add
 // Armazenamento em memória das fotos/logótipos carregados
 window.empresaFotoBase64 = null;
 window.clienteFotoBase64 = null;
+window.empresaFotoFicheiro = null;
+window.clienteFotoFicheiro = null;
+window.empresaFotoPreview = null;
+window.clienteFotoPreview = null;
 
 // Ícones SVG exclusivos para Toasts (sem emojis)
 const SVGS_TOAST = {
@@ -45,26 +49,14 @@ function mostrarToast(mensagem, tipo = "info", duracao = 3500) {
     }, duracao);
 }
 
-// ---- Integração API ImgBB para upload garantido ----
-const IMGBB_API_KEY = "54f74233160a60cb0afa306af55108e1";
-
 async function uploadImagemImgBB(ficheiro) {
-    const formData = new FormData();
-    formData.append("image", ficheiro);
+    if (!window.dimmakoMedia) throw new Error("O serviço de envio de imagens não foi carregado.");
     try {
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-            method: "POST",
-            body: formData
-        });
-        const json = await res.json();
-        if (json && json.success && json.data && json.data.url) {
-            return json.data.url;
-        }
-        console.error("Erro na resposta do ImgBB:", json);
-        return null;
-    } catch (err) {
-        console.error("Falha de rede ao conectar com o ImgBB:", err);
-        return null;
+        return await window.dimmakoMedia.uploadToImgBB(ficheiro);
+    } catch (cause) {
+        const error = new Error(cause.message || "Não foi possível enviar a imagem para o ImgBB.");
+        error.code = "dimmako/imgbb-upload-failed";
+        throw error;
     }
 }
 
@@ -123,6 +115,35 @@ function dataNascimentoValida() {
     let idade = hoje.getFullYear() - ano;
     if (hoje.getMonth() < mes - 1 || (hoje.getMonth() === mes - 1 && hoje.getDate() < dia)) idade--;
     return idade >= 18 && idade <= 120;
+}
+
+function validarDataNascimento(mostrarErro = true) {
+    const valido = dataNascimentoValida();
+    const grupo = document.querySelector(".dataEspace");
+    if (!grupo) return valido;
+
+    grupo.querySelectorAll('[data-validation-for="dia"], [data-validation-for="mes"], [data-validation-for="ano"]').forEach(mensagem => mensagem.remove());
+    let mensagem = grupo.querySelector('[data-validation-for="dataNascimento"]');
+    if (!mensagem) {
+        mensagem = document.createElement("small");
+        mensagem.className = "field-validation-message";
+        mensagem.dataset.validationFor = "dataNascimento";
+        mensagem.id = "dataNascimentoError";
+        mensagem.setAttribute("role", "alert");
+        grupo.appendChild(mensagem);
+    }
+    mensagem.textContent = "Deve ter pelo menos 18 anos de idade.";
+    mensagem.hidden = valido || !mostrarErro;
+
+    ["dia", "mes", "ano"].forEach(id => {
+        const campo = document.getElementById(id);
+        if (!campo) return;
+        campo.classList.toggle("is-invalid", !valido);
+        campo.classList.toggle("is-valid", valido);
+        campo.setAttribute("aria-invalid", String(!valido));
+        campo.setAttribute("aria-describedby", mensagem.id);
+    });
+    return valido;
 }
 
 function validarFicheiroImagem(input) {
@@ -196,9 +217,7 @@ function validarCampoCadastro(id, mostrarErro = true) {
         case "dia":
         case "mes":
         case "ano":
-            valido = dataNascimentoValida();
-            erro = "Indique uma data real e confirme que tem pelo menos 18 anos.";
-            break;
+            return validarDataNascimento(mostrarErro);
         case "sexoVendedor":
             valido = ["Masculino", "Feminino", "Outro"].includes(valor);
             erro = "Selecione uma opção válida.";
@@ -218,10 +237,6 @@ function validarCampos(ids) {
     const categorias = document.querySelectorAll("#categoriasNegocio button.seleccionado");
     if (ids.includes("categoriaNegocio") && categorias.length !== 1) {
         mostrarToast("Selecione uma categoria para o seu negócio.", "erro");
-        return false;
-    }
-    if (ids.some(id => ["dia", "mes", "ano"].includes(id)) && !dataNascimentoValida()) {
-        ["dia", "mes", "ano"].forEach(id => definirErroCampo(document.getElementById(id), false, "Indique uma data real e confirme que tem pelo menos 18 anos."));
         return false;
     }
     return resultados.every(Boolean);
@@ -349,6 +364,12 @@ function popularSelectsNascimento() {
 function confirmarEmail() {
     const valor = sanitizarTexto(email.value);
     email.value = valor;
+    if (!ehEmailValido(valor.toLowerCase())) {
+        definirErroCampo(email, false, "Use um email válido. O acesso por telefone ainda não está configurado.");
+        mostrarToast("Introduza um endereço de email válido para continuar com email e senha.", "erro");
+        email.focus();
+        return;
+    }
     if (!validarCampos(["email"])) return;
     elemento.style.display = "flex";
     setTimeout(() => {
@@ -360,42 +381,62 @@ function confirmarEmail() {
     }, 800);
 }
 
+let transicaoPassoAtiva = false;
+
+function executarTransicaoPasso(atualizarPasso) {
+    if (transicaoPassoAtiva) return;
+    transicaoPassoAtiva = true;
+    elemento.style.display = "flex";
+    window.setTimeout(() => {
+        try {
+            atualizarPasso();
+        } finally {
+            elemento.style.display = "none";
+            transicaoPassoAtiva = false;
+        }
+    }, 420);
+}
+
 function irParaPasso(idAtual, idProximo, passoAtualId, passoProximoId) {
     const atual = document.getElementById(idAtual);
     const proximo = document.getElementById(idProximo);
 
-    if (atual) atual.style.display = "none";
-    if (proximo) {
-        proximo.style.animation = "slideLeft 0.5s linear";
-        proximo.style.display = "flex";
-    }
+    executarTransicaoPasso(() => {
+        if (atual) atual.style.display = "none";
+        if (proximo) {
+            proximo.style.animation = "slideLeft 0.5s linear";
+            proximo.style.display = "flex";
+        }
 
-    if (passoAtualId) {
-        const passoAtual = document.getElementById(passoAtualId);
-        passoAtual.style.background = "#de6706";
-        passoAtual.style.color = "white";
-    }
-    if (passoProximoId) {
-        const passoProximo = document.getElementById(passoProximoId);
-        passoProximo.style.background = "#de6706";
-        passoProximo.style.color = "white";
-    }
+        if (passoAtualId) {
+            const passoAtual = document.getElementById(passoAtualId);
+            passoAtual.style.background = "#de6706";
+            passoAtual.style.color = "white";
+        }
+        if (passoProximoId) {
+            const passoProximo = document.getElementById(passoProximoId);
+            passoProximo.style.background = "#de6706";
+            passoProximo.style.color = "white";
+        }
+    });
 }
 
 function voltarPasso(idAtual, idAnterior, passoAtualId) {
     const atual = document.getElementById(idAtual);
     const anterior = document.getElementById(idAnterior);
 
-    if (atual) atual.style.display = "none";
-    if (anterior) {
-        anterior.style.animation = "slideLeft 0.5s linear";
-        anterior.style.display = "flex";
-    }
-    if (passoAtualId) {
-        const passoAtual = document.getElementById(passoAtualId);
-        passoAtual.style.background = "#f2b888";
-        passoAtual.style.color = "rgb(222, 112, 33)";
-    }
+    executarTransicaoPasso(() => {
+        if (atual) atual.style.display = "none";
+        if (anterior) {
+            anterior.style.animation = "slideLeft 0.5s linear";
+            anterior.style.display = "flex";
+        }
+        if (passoAtualId) {
+            const passoAtual = document.getElementById(passoAtualId);
+            passoAtual.style.background = "#f2b888";
+            passoAtual.style.color = "rgb(222, 112, 33)";
+        }
+    });
 }
 
 function selecionarUnico(botao) {
@@ -432,25 +473,19 @@ async function mostrarPreview(inputId, previewId) {
         return;
     }
     definirErroCampo(input, true, "");
-
-    const backupHTML = preview.innerHTML;
-    preview.innerHTML = `<div class="spinner" style="width:26px;height:26px;border-width:3px;margin:auto;"></div>`;
-    mostrarToast("A carregar imagem para o servidor...", "info", 2000);
-
-    const urlRemota = await uploadImagemImgBB(ficheiro);
-    if (urlRemota) {
-        preview.innerHTML = `<img src="${urlRemota}" alt="Foto" style="width:100%;height:100%;object-fit:cover;border-radius:100%;">`;
-        if (inputId === "logotipoEmpresa") {
-            window.empresaFotoBase64 = urlRemota;
-        } else if (inputId === "fotoPerfilCliente") {
-            window.clienteFotoBase64 = urlRemota;
-        }
-        mostrarToast("Imagem enviada com sucesso!", "sucesso");
+    const imagemEmpresa = inputId === "logotipoEmpresa";
+    const previewAnterior = imagemEmpresa ? window.empresaFotoPreview : window.clienteFotoPreview;
+    if (previewAnterior) URL.revokeObjectURL(previewAnterior);
+    const previewLocal = URL.createObjectURL(ficheiro);
+    preview.innerHTML = `<img src="${previewLocal}" alt="Pré-visualização da imagem" style="width:100%;height:100%;object-fit:cover;border-radius:100%;">`;
+    if (imagemEmpresa) {
+        window.empresaFotoFicheiro = ficheiro;
+        window.empresaFotoPreview = previewLocal;
     } else {
-        preview.innerHTML = backupHTML;
-        input.value = "";
-        mostrarToast("Não foi possível carregar a imagem para o ImgBB. Tente novamente.", "erro");
+        window.clienteFotoFicheiro = ficheiro;
+        window.clienteFotoPreview = previewLocal;
     }
+    mostrarToast("Imagem selecionada. Será enviada com segurança ao concluir o cadastro.", "info");
 }
 
 function avancarPasso2Vendedor() {
@@ -475,21 +510,153 @@ function avancarPasso3Vendedor() {
 
 function obterContas() {
     try {
-        return JSON.parse(localStorage.getItem("dimmakoContas")) || [];
+        const contas = JSON.parse(localStorage.getItem("dimmakoContas") || "[]");
+        return Array.isArray(contas) ? contas.map(conta => {
+            const { senha, password, ...perfilSeguro } = conta;
+            return perfilSeguro;
+        }) : [];
     } catch (e) {
         return [];
     }
 }
 
-function guardarContaCompleta(conta) {
-    if (!conta || !conta.identificador) return;
-    const contas = obterContas().filter(c => c.identificador !== conta.identificador);
-    contas.push(conta);
-    localStorage.setItem("dimmakoContas", JSON.stringify(contas));
-    localStorage.setItem("dimmakoSessaoActual", JSON.stringify(conta));
+function obterErroFirebase(error, provedor = "") {
+    if (error?.code === "dimmako/imgbb-upload-failed") return error.message;
+    const nomesProvedores = {
+        Google: "Google",
+        Facebook: "Facebook",
+        Apple: "Apple",
+        Email: "email e senha"
+    };
+    const nomeProvedor = nomesProvedores[provedor] || "este método";
+    const mensagens = {
+        "auth/email-already-in-use": "Este email já tem uma conta. Entre ou recupere o acesso.",
+        "auth/invalid-email": "O email introduzido não é válido.",
+        "auth/weak-password": "A senha não cumpre os requisitos de segurança.",
+        "auth/invalid-credential": "Email ou senha incorretos.",
+        "auth/user-not-found": "Email ou senha incorretos.",
+        "auth/wrong-password": "Email ou senha incorretos.",
+        "auth/too-many-requests": "Muitas tentativas. Aguarde e tente novamente.",
+        "auth/network-request-failed": "Sem ligação ao serviço de autenticação. Tente novamente.",
+        "auth/account-exists-with-different-credential": "Este email já está associado a outro método de acesso. Entre com esse método primeiro.",
+        "auth/credential-already-in-use": "Esta conta de provedor já está associada a outra conta Dimmako.",
+        "auth/invalid-oauth-client-id": "A configuração OAuth deste provedor está incompleta no Firebase Console.",
+        "auth/invalid-apple-credential": "A configuração de Sign in with Apple está inválida. Verifique o Service ID, Team ID e chave no Firebase.",
+        "auth/invalid-api-key": "A chave da aplicação Firebase é inválida. Confira a configuração Firebase local.",
+        "auth/app-not-authorized": "Esta aplicação não está autorizada para este projeto Firebase. Confira o domínio e a configuração da aplicação.",
+        "auth/invalid-continue-uri": "O endereço de retorno da autenticação é inválido. Confira os domínios autorizados no Firebase Authentication.",
+        "auth/unauthorized-continue-uri": "O endereço de retorno não está autorizado. Adicione o domínio aos domínios autorizados do Firebase Authentication.",
+        "auth/invalid-oauth-provider": `O provedor ${nomeProvedor} não foi reconhecido pela configuração OAuth do Firebase.`,
+        "auth/unauthorized-domain": "Este domínio não está autorizado no Firebase Authentication. Adicione-o aos domínios autorizados do projeto.",
+        "auth/operation-not-allowed": `O acesso por ${nomeProvedor} está desativado. Ative esse provedor em Firebase Console > Authentication > Método de login.`,
+        "auth/popup-blocked": "O navegador bloqueou a janela de autenticação.",
+        "auth/popup-closed-by-user": "A janela de autenticação foi fechada.",
+        "auth/cancelled-popup-request": "O pedido de autenticação foi cancelado.",
+        "auth/web-storage-unsupported": "O navegador bloqueou o armazenamento necessário para autenticar. Permita cookies e armazenamento do site.",
+        "permission-denied": "O Firestore recusou o acesso. Confirme as regras de segurança publicadas."
+    };
+    if (mensagens[error?.code]) return mensagens[error.code];
+    if (error?.code) {
+        return `O Firebase devolveu o erro "${error.code}" ao autenticar com ${nomeProvedor}. Verifique o provedor, os domínios autorizados e a configuração OAuth no Console do Firebase.`;
+    }
+    if (!window.dimmakoFirebase) {
+        return "O Firebase não foi inicializado. Confira a configuração local e se os scripts do Firebase carregaram.";
+    }
+    return `Não foi possível autenticar com ${nomeProvedor}. Verifique a ligação e consulte o Console do Firebase para o detalhe do erro.`;
 }
 
-function finalizarCadastroVendedor() {
+function obterEmailFirebase(valor) {
+    const emailFirebase = sanitizarTexto(valor).toLowerCase();
+    if (!ehEmailValido(emailFirebase)) {
+        throw new Error("Para usar email e senha, introduza um endereço de email válido. O acesso por telefone exige Phone Authentication e reCAPTCHA configurados no Firebase.");
+    }
+    return emailFirebase;
+}
+
+function criarPerfilLocalSeguro(perfil) {
+    return {
+        uid: perfil.uid,
+        tipo: perfil.tipo,
+        identificador: perfil.identificador,
+        email: perfil.email || "",
+        nome: perfil.nome || "Utilizador",
+        nomeCompleto: perfil.nomeCompleto || perfil.nome || "",
+        nomeEmpresa: perfil.nomeEmpresa || "",
+        categoria: perfil.categoria || "",
+        descricao: perfil.descricao || "",
+        foto: perfil.foto || null
+    };
+}
+
+async function guardarContaCompleta(conta, utilizadorFirebase = window.dimmakoFirebase?.auth.currentUser) {
+    if (!conta || !utilizadorFirebase) throw new Error("É necessário autenticar no Firebase antes de guardar o perfil.");
+    const emailFirebase = utilizadorFirebase.email || "";
+    const perfil = {
+        uid: utilizadorFirebase.uid,
+        tipo: conta.tipo === "vendedor" ? "vendedor" : "cliente",
+        identificador: emailFirebase || utilizadorFirebase.uid,
+        email: emailFirebase || undefined,
+        nome: sanitizarTexto(conta.nome || conta.nomeCompleto || conta.nomeEmpresa || utilizadorFirebase.displayName || "Utilizador"),
+        nomeCompleto: sanitizarTexto(conta.nomeCompleto || conta.nome || utilizadorFirebase.displayName || ""),
+        nomeEmpresa: sanitizarTexto(conta.nomeEmpresa || ""),
+        emailEmpresa: sanitizarTexto(conta.emailEmpresa || ""),
+        telefoneEmpresa: sanitizarTexto(conta.telefoneEmpresa || ""),
+        sexo: sanitizarTexto(conta.sexo || ""),
+        bi: sanitizarTexto(conta.bi || ""),
+        dataNasc: sanitizarTexto(conta.dataNasc || ""),
+        categoria: sanitizarTexto(conta.categoria || ""),
+        descricao: sanitizarTexto(conta.descricao || ""),
+        foto: window.dimmakoMedia?.isImgBBUrl(conta.foto) ? conta.foto.slice(0, 2048) : null
+    };
+    const perfilFirestore = Object.fromEntries(Object.entries(perfil).filter(([, valor]) => valor !== undefined));
+    const referencia = window.dimmakoFirebase.db.collection("profiles").doc(utilizadorFirebase.uid);
+    const existente = await referencia.get();
+    const dadosGravacao = {
+        ...perfilFirestore,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (!existente.exists) dadosGravacao.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    const perfilPublico = {
+        uid: utilizadorFirebase.uid,
+        tipo: perfilFirestore.tipo,
+        nome: perfilFirestore.nome,
+        nomeEmpresa: perfilFirestore.nomeEmpresa,
+        categoria: perfilFirestore.categoria,
+        descricao: perfilFirestore.descricao,
+        foto: perfilFirestore.foto,
+        visible: true,
+        verified: true,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    const batch = window.dimmakoFirebase.db.batch();
+    batch.set(referencia, dadosGravacao, { merge: true });
+    batch.set(window.dimmakoFirebase.db.collection("publicProfiles").doc(utilizadorFirebase.uid), perfilPublico, { merge: true });
+    await batch.commit();
+
+    const perfilLocal = criarPerfilLocalSeguro(perfilFirestore);
+    const contas = obterContas().filter(item => item.uid !== utilizadorFirebase.uid && item.identificador !== perfilLocal.identificador);
+    contas.push(perfilLocal);
+    localStorage.setItem("dimmakoContas", JSON.stringify(contas));
+    localStorage.setItem("dimmakoSessaoActual", JSON.stringify(perfilLocal));
+    return perfilLocal;
+}
+
+function limparCredenciaisLegadas() {
+    const contasSeguras = obterContas();
+    localStorage.setItem("dimmakoContas", JSON.stringify(contasSeguras));
+    try {
+        const sessao = JSON.parse(localStorage.getItem("dimmakoSessaoActual") || "null");
+        if (sessao && (sessao.senha || sessao.password)) {
+            delete sessao.senha;
+            delete sessao.password;
+            localStorage.setItem("dimmakoSessaoActual", JSON.stringify(sessao));
+        }
+    } catch (error) {
+        localStorage.removeItem("dimmakoSessaoActual");
+    }
+}
+
+async function finalizarCadastroVendedor() {
     if (cadastroEmProcesso) return;
     const ids = ["nomeCompletoVendedor", "dia", "mes", "ano", "sexoVendedor", "biVendedor", "senhaVendedor", "confirmarSenhaVendedor", "nomeEmpresa", "emailEmpresa", "telefoneEmpresa", "categoriaNegocio", "descriptionBus", "logotipoEmpresa"];
     if (!validarCampos(ids)) {
@@ -514,6 +681,7 @@ function finalizarCadastroVendedor() {
     const nomeEmpresa = sanitizarTexto(document.getElementById("nomeEmpresa").value);
     const emailEmpresa = sanitizarTexto(document.getElementById("emailEmpresa").value);
     const telefoneEmpresa = sanitizarTexto(document.getElementById("telefoneEmpresa").value);
+    const emailAuth = ehEmailValido(email.value.trim()) ? email.value.trim().toLowerCase() : emailEmpresa.toLowerCase();
     const categoriaBtn = document.querySelector("#categoriasNegocio button.seleccionado");
     const categoria = categoriaBtn ? categoriaBtn.textContent.trim() : "Comércio Geral";
     const descricao = sanitizarTexto(document.getElementById("descriptionBus").value);
@@ -522,8 +690,8 @@ function finalizarCadastroVendedor() {
 
     const conta = {
         tipo: "vendedor",
-        identificador: (email.value || emailEmpresa || "").trim().toLowerCase(),
-        senha: senha,
+        identificador: emailAuth,
+        email: emailAuth,
         nome: nomeCompleto || nomeEmpresa,
         nomeCompleto: nomeCompleto,
         nomeEmpresa: nomeEmpresa,
@@ -537,15 +705,29 @@ function finalizarCadastroVendedor() {
         foto: foto
     };
 
-    guardarContaCompleta(conta);
-
-    setTimeout(() => {
+    try {
+        if (!window.dimmakoFirebase) throw new Error("Firebase não está inicializado.");
+        await window.dimmakoFirebase.ready;
+        const credencial = await window.dimmakoFirebase.auth.createUserWithEmailAndPassword(emailAuth, senha);
+        try {
+            if (window.empresaFotoFicheiro) {
+                conta.foto = await uploadImagemImgBB(window.empresaFotoFicheiro);
+            }
+            await guardarContaCompleta(conta, credencial.user);
+        } catch (error) {
+            await credencial.user.delete().catch(() => { });
+            throw error;
+        }
         elemento.style.display = "none";
         mostrarToast("Cadastro concluído com sucesso! A entrar na Dimmako...", "sucesso");
         setTimeout(() => {
             window.location.href = "home.html";
         }, 1000);
-    }, 1200);
+    } catch (error) {
+        elemento.style.display = "none";
+        cadastroEmProcesso = false;
+        mostrarToast(obterErroFirebase(error), "erro", 5000);
+    }
 }
 
 function irParaCliente() {
@@ -559,36 +741,17 @@ function irParaCliente() {
     irParaPasso('divPasso1', 'divCliente1');
 }
 
-function cadastrarCliente() {
+async function cadastrarCliente() {
     if (cadastroEmProcesso) return;
     if (!validarCampos(["nomeCliente", "emailCliente", "senhaCliente", "confirmarSenhaCliente", "fotoPerfilCliente"])) {
         mostrarToast("Corrija os campos assinalados antes de concluir o cadastro.", "erro");
         return;
     }
-    cadastroEmProcesso = true;
     const nome = sanitizarTexto(document.getElementById("nomeCliente").value);
     const emailCliente = sanitizarTexto(document.getElementById("emailCliente").value).toLowerCase();
     const senha = document.getElementById("senhaCliente").value;
-    const confirmarSenha = document.getElementById("confirmarSenhaCliente").value;
-
-    if (!nome || nome.length < 2) {
-        mostrarToast("Por favor, introduza o seu nome completo.", "erro");
-        return;
-    }
-    if (!emailCliente || !ehEmailOuTelefoneValido(emailCliente)) {
-        mostrarToast("Por favor, introduza um email ou telefone válido.", "erro");
-        return;
-    }
-    if (!senha || !confirmarSenha) {
-        mostrarToast("Preencha a senha e a confirmação de senha.", "erro");
-        return;
-    }
-    if (senha.length < 6) {
-        mostrarToast("A senha deve ter pelo menos 6 caracteres.", "erro");
-        return;
-    }
-    if (senha !== confirmarSenha) {
-        mostrarToast("As senhas não coincidem.", "erro");
+    if (!ehEmailValido(emailCliente)) {
+        mostrarToast("O Firebase está configurado para email e senha. Acesso por telefone requer Phone Authentication e reCAPTCHA ativos.", "erro", 6000);
         return;
     }
 
@@ -596,49 +759,118 @@ function cadastrarCliente() {
         tipo: "cliente",
         identificador: emailCliente,
         email: emailCliente,
-        senha: senha,
         nome: nome,
         nomeCompleto: nome,
         foto: window.clienteFotoBase64 || null
     };
 
-    guardarContaCompleta(conta);
-
+    cadastroEmProcesso = true;
     elemento.style.display = "flex";
-    setTimeout(() => {
+    try {
+        await window.dimmakoFirebase.ready;
+        const credencial = await window.dimmakoFirebase.auth.createUserWithEmailAndPassword(emailCliente, senha);
+        try {
+            if (window.clienteFotoFicheiro) {
+                conta.foto = await uploadImagemImgBB(window.clienteFotoFicheiro);
+            }
+            await guardarContaCompleta(conta, credencial.user);
+        } catch (error) {
+            await credencial.user.delete().catch(() => { });
+            throw error;
+        }
         elemento.style.display = "none";
         mostrarToast("Cadastro de cliente concluído com sucesso! A entrar na Dimmako...", "sucesso");
         setTimeout(() => {
             window.location.href = "home.html";
         }, 800);
-    }, 1000);
+    } catch (error) {
+        elemento.style.display = "none";
+        cadastroEmProcesso = false;
+        mostrarToast(obterErroFirebase(error), "erro", 5000);
+    }
 }
 
-function continuarComProvedor(provedor) {
+async function continuarComProvedor(provedor) {
+    if (provedor === "Email") {
+        const campoEmail = document.getElementById("email");
+        if (!campoEmail) return;
+        if (!ehEmailOuTelefoneValido(sanitizarTexto(campoEmail.value))) {
+            campoEmail.focus();
+            mostrarToast("Introduza um email válido e confirme para criar uma conta, ou use Entrar se já tiver conta.", "info");
+            return;
+        }
+        confirmarEmail();
+        return;
+    }
+
+    const criadores = {
+        Google: () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            provider.setCustomParameters({ prompt: "select_account" });
+            return provider;
+        },
+        Facebook: () => {
+            const provider = new firebase.auth.FacebookAuthProvider();
+            provider.addScope("email");
+            return provider;
+        },
+        Apple: () => {
+            const provider = new firebase.auth.OAuthProvider("apple.com");
+            provider.addScope("email");
+            provider.addScope("name");
+            return provider;
+        }
+    };
+    if (!criadores[provedor]) {
+        mostrarToast("Este método de acesso não é suportado.", "erro");
+        return;
+    }
+    if (!window.dimmakoFirebase?.auth) {
+        mostrarToast(obterErroFirebase(null, provedor), "erro", 6000);
+        return;
+    }
+
     elemento.style.display = "flex";
-    setTimeout(() => {
+    try {
+        await window.dimmakoFirebase.ready;
+        const auth = window.dimmakoFirebase.auth;
+        const provider = criadores[provedor]();
+        sessionStorage.setItem("dimmakoProvedorAuthPendente", provedor);
+        try {
+            const resultado = await auth.signInWithPopup(provider);
+            sessionStorage.removeItem("dimmakoProvedorAuthPendente");
+            await finalizarAcessoProvedor(resultado.user);
+        } catch (error) {
+            if (error.code === "auth/popup-blocked") {
+                await auth.signInWithRedirect(provider);
+                return;
+            }
+            sessionStorage.removeItem("dimmakoProvedorAuthPendente");
+            throw error;
+        }
+    } catch (error) {
         elemento.style.display = "none";
-        const emailProvedor = (email.value || "").trim().toLowerCase() || `${provedor.toLowerCase()}user@dimmako.ao`;
-        email.value = emailProvedor;
+        sessionStorage.removeItem("dimmakoProvedorAuthPendente");
+        console.error(`Falha na autenticação pelo provedor ${provedor}.`, error);
+        mostrarToast(obterErroFirebase(error, provedor), "erro", 6000);
+    }
+}
 
-        const nomeProvedor = `${provedor} User`;
-        const elNomeCliente = document.getElementById("nomeCliente");
-        const elEmailCliente = document.getElementById("emailCliente");
-        const elNomeVendedor = document.getElementById("nomeCompletoVendedor");
-        const elEmailEmpresa = document.getElementById("emailEmpresa");
-
-        if (elNomeCliente) elNomeCliente.value = nomeProvedor;
-        if (elEmailCliente) elEmailCliente.value = emailProvedor;
-        if (elNomeVendedor) elNomeVendedor.value = nomeProvedor;
-        if (elEmailEmpresa) elEmailEmpresa.value = emailProvedor;
-
-        listElementNone.forEach((element) => {
-            element.style.display = "none";
-        });
-        switchTypeUser.style.animation = "slideLeft 0.5s linear";
-        switchTypeUser.style.display = "flex";
-        mostrarToast(`Conectado com ${provedor}! Escolha como pretende utilizar a plataforma.`, "info");
-    }, 600);
+async function finalizarAcessoProvedor(utilizador) {
+    const profileRef = window.dimmakoFirebase.db.collection("profiles").doc(utilizador.uid);
+    const profileSnapshot = await profileRef.get();
+    const profile = profileSnapshot.exists
+        ? profileSnapshot.data()
+        : {
+            tipo: "cliente",
+            identificador: utilizador.email || utilizador.uid,
+            email: utilizador.email || undefined,
+            nome: utilizador.displayName || "Utilizador",
+            nomeCompleto: utilizador.displayName || "Utilizador",
+            foto: null
+        };
+    await guardarContaCompleta(profile, utilizador);
+    window.location.replace("home.html");
 }
 
 function abrirLogin() {
@@ -654,7 +886,7 @@ function fecharLogin() {
     espacoOptionAuth.style.display = "flex";
 }
 
-function fazerLogin() {
+async function fazerLogin() {
     const identificador = sanitizarTexto(document.getElementById("loginIdentificador").value).toLowerCase();
     const senha = document.getElementById("loginSenha").value;
     document.getElementById("loginIdentificador").value = identificador;
@@ -663,30 +895,66 @@ function fazerLogin() {
         return;
     }
 
+    if (!ehEmailValido(identificador)) {
+        mostrarToast("O Firebase está configurado para email e senha. Acesso por telefone requer Phone Authentication e reCAPTCHA ativos.", "erro", 6000);
+        return;
+    }
+
     elemento.style.display = "flex";
-    setTimeout(() => {
+    try {
+        await window.dimmakoFirebase.ready;
+        const credencial = await window.dimmakoFirebase.auth.signInWithEmailAndPassword(identificador, senha);
+        const snapshot = await window.dimmakoFirebase.db.collection("profiles").doc(credencial.user.uid).get();
+        const perfilLegado = obterContas().find(conta => conta.identificador === identificador);
+        const profile = snapshot.exists ? snapshot.data() : {
+            ...(perfilLegado || {}),
+            tipo: perfilLegado?.tipo || "cliente",
+            identificador,
+            email: credencial.user.email,
+            nome: perfilLegado?.nome || credencial.user.displayName || "Utilizador",
+            nomeCompleto: perfilLegado?.nomeCompleto || credencial.user.displayName || "Utilizador"
+        };
+        await guardarContaCompleta(profile, credencial.user);
         elemento.style.display = "none";
-
-        const conta = obterContas().find(c => c.identificador === identificador && c.senha === senha);
-
-        if (!conta) {
-            mostrarToast("Dados incorrectos ou conta não encontrada. Verifique as credenciais.", "erro");
-            return;
-        }
-
-        localStorage.setItem("dimmakoSessaoActual", JSON.stringify(conta));
-
-        const saudacao = conta.nome || conta.nomeEmpresa || (conta.tipo === "vendedor" ? "Vendedor" : "Cliente");
+        const saudacao = profile.nome || profile.nomeEmpresa || "Utilizador";
         mostrarToast(`Bem-vindo de volta, ${saudacao}! A entrar...`, "sucesso");
-
         setTimeout(() => {
             window.location.href = "home.html";
         }, 1000);
-    }, 1000);
+    } catch (error) {
+        elemento.style.display = "none";
+        mostrarToast(obterErroFirebase(error), "erro", 5000);
+    }
 }
 
 // Inicialização na carga da página
 document.addEventListener("DOMContentLoaded", () => {
+    limparCredenciaisLegadas();
     popularSelectsNascimento();
     configurarValidacaoEmTempoReal();
+    email?.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            confirmarEmail();
+        }
+    });
+    if (window.dimmakoFirebase) {
+        window.dimmakoFirebase.ready
+            .then(() => window.dimmakoFirebase.auth.getRedirectResult())
+            .then(resultado => {
+                if (!resultado?.user) {
+                    sessionStorage.removeItem("dimmakoProvedorAuthPendente");
+                    return;
+                }
+                sessionStorage.removeItem("dimmakoProvedorAuthPendente");
+                elemento.style.display = "flex";
+                return finalizarAcessoProvedor(resultado.user);
+            })
+            .catch(error => {
+                elemento.style.display = "none";
+                console.error("Falha ao concluir o acesso por redirecionamento do provedor.", error);
+                mostrarToast(obterErroFirebase(error, sessionStorage.getItem("dimmakoProvedorAuthPendente") || ""), "erro", 6000);
+                sessionStorage.removeItem("dimmakoProvedorAuthPendente");
+            });
+    }
 });

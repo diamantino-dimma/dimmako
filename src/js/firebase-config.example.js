@@ -7,5 +7,6 @@ window.__DIMMAKO_FIREBASE_CONFIG__ = Object.freeze({
     appId: "",
     measurementId: "",
     appCheckSiteKey: "",
+    arcgisApiKey: "",
     imgbbApiKey: ""
 });

@@ -1,4 +1,4 @@
-const MAPLIBRE_KEY = "AAPTad4pDzvT0P2JYUFzm5-996A..QAeKAQT8o6PDE02yixDy4z0mSzhSt1tmVxvs2CVZV_Oi9-lOcF1pcIyEJ8nvpnarvRdn3TwUjlS2kGDdzNiCYQJk2i0USJnICLm3lANnq3e2ytyRAjTd3MMdYMtP70U9Z-A3k1RnzoqxsCAAuYACxKr7tuHVe6-Hlc5J8Y3AJh1kCyB46DXNmBbEpXEfxZ89S2inymLOYSlVF7GQZd83wyQAQWVnj7nQlkayHd0CqxY3AYGCAdyzAT1_KVaPo0C0";
+const MAPLIBRE_KEY = window.__DIMMAKO_FIREBASE_CONFIG__?.arcgisApiKey || "";
 const friendsData = [];
 let activeFriend = null;
 let activeConversationId = null;
@@ -1124,6 +1124,11 @@ function atualizarBotaoPublicarMobile() {
 }
 
 function obterEstiloMapa(escuro, tipoMapa = estiloMapaActual || "normal") {
+    if (!MAPLIBRE_KEY) {
+        return escuro
+            ? "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+            : "https://tiles.openfreemap.org/styles/liberty";
+    }
     const tema = escuro ? "navigation-night" : "streets";
     const mapas = {
         normal: escuro ? `https://basemapstyles-api.arcgis.com/arcgis/rest/services/styles/v2/styles/arcgis/navigation-night?token=${MAPLIBRE_KEY}` : `https://basemapstyles-api.arcgis.com/arcgis/rest/services/styles/v2/styles/arcgis/streets?token=${MAPLIBRE_KEY}`,

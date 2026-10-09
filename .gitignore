@@ -1,6 +1,11 @@
 .env
 .env.*
+!.env.example
+.vercel/
 .firebase/
 dimmakoapis.txt
 dadosFirebase.text
 /src/js/firebase-config.js
+/dist/
+./firestore.rules
+\src\js\firebase-config.example.js

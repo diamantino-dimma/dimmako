@@ -15,7 +15,10 @@
         console.warn("[Dimmako] App Check não está configurado. Configure uma site key no Firebase Console antes de ativar a aplicação em produção.");
     }
     const appCheckReady = appCheckKey
-        ? firebase.appCheck().activate(appCheckKey, true)
+        ? firebase.appCheck().activate(
+            new firebase.appCheck.ReCaptchaEnterpriseProvider(appCheckKey),
+            true
+        )
         : Promise.resolve();
 
     window.dimmakoFirebase = Object.freeze({

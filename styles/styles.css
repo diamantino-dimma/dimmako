@@ -98,6 +98,23 @@
      margin-left: 0;
  }
 
+ .headerForms-logo {
+     align-items: center;
+     background: #de6706;
+     border-radius: 12px;
+     color: #fff;
+     display: inline-flex;
+     flex-shrink: 0;
+     height: 48px;
+     justify-content: center;
+     width: 48px;
+ }
+
+ .headerForms-logo img {
+     height: 26px;
+     width: 26px;
+ }
+
  .headerForms h2 {
      flex: 1;
      font-size: 34px;
@@ -342,6 +359,18 @@
      font-weight: 500;
      color: #8a8684;
      margin: -4px 0 2px;
+ }
+
+ .field-validation-message {
+     display: block;
+     width: 100%;
+     color: #b42318;
+     font-size: 12px;
+     line-height: 1.4;
+ }
+
+ .field-validation-message[hidden] {
+     display: none;
  }
 
  .btnPrimario,
@@ -596,72 +625,6 @@
      border-radius: 100%;
  }
 
- #formasPay {
-     height: auto;
-     display: grid;
-     grid-template-columns: repeat(3, 1fr);
-     gap: 10px;
-     width: 100%;
- }
-
- #formasPay button {
-     position: relative;
-     width: 100%;
-     height: 68px;
-     border-radius: 12px;
-     border: 2px solid #dfdad6;
-     background: #fff;
-     padding: 0;
-     overflow: hidden;
-     cursor: pointer;
-     display: flex;
-     align-items: center;
-     justify-content: center;
-     transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
- }
-
- #formasPay button img {
-     width: 100%;
-     height: 100%;
-     object-fit: cover;
-     display: block;
-     pointer-events: none;
-     transition: transform 0.2s ease;
- }
-
- #formasPay button:hover {
-     border-color: #de6706;
-     box-shadow: 0 4px 12px rgba(222, 103, 6, 0.25);
-     transform: translateY(-2px);
- }
-
- #formasPay button:hover img {
-     transform: scale(1.05);
- }
-
- #formasPay button.seleccionado {
-     border-color: #de6706;
-     box-shadow: 0 0 0 3px rgba(222, 103, 6, 0.35);
- }
-
- #formasPay button.seleccionado::after {
-     content: "";
-     position: absolute;
-     top: 5px;
-     right: 5px;
-     width: 20px;
-     height: 20px;
-     background-color: #de6706;
-     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
-     background-repeat: no-repeat;
-     background-position: center;
-     background-size: 13px 13px;
-     border-radius: 50%;
-     display: block;
-     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-     z-index: 2;
- }
-
  .linkVoltar {
      cursor: pointer;
      color: #8a8684;
@@ -896,6 +859,16 @@
          flex-shrink: 0;
      }
 
+     .headerForms-logo {
+         height: 38px;
+         width: 38px;
+     }
+
+     .headerForms-logo svg {
+         height: 21px;
+         width: 21px;
+     }
+
      .headerForms h2 {
          font-size: 26px;
          margin-left: 10px;
@@ -949,15 +922,6 @@
          height: 46px;
      }
 
-     #formasPay {
-         grid-template-columns: repeat(3, 1fr);
-         gap: 8px;
-     }
-
-     #formasPay button {
-         height: 62px;
-     }
-
      .espacoCategoeias button {
          width: 100%;
          height: 40px;
@@ -1009,4 +973,151 @@
 
  .req-item.valido svg {
      stroke: #28a745 !important;
+ }
+
+ /* ===================== TEMA ESCURO (PADRÃO) ===================== */
+ body.dark-theme {
+     background: #16181b;
+     color: #e8eaed
+ }
+
+ body.dark-theme .divLeftImg {
+     background-color: #b35304
+ }
+
+ body.dark-theme .spaceWallForms {
+     background-color: #1e2023
+ }
+
+ body.dark-theme .headerForms h2 {
+     color: #ff8a3d
+ }
+
+ body.dark-theme #btnEntrar {
+     border-color: #ff8a3d;
+     color: #ff8a3d
+ }
+
+ body.dark-theme #btnEntrar:hover {
+     background: #ff8a3d;
+     color: #16181b
+ }
+
+ body.dark-theme .espacoOptionAuth>h2,
+ body.dark-theme #divPasso1 h2,
+ body.dark-theme #divPasso2 h2,
+ body.dark-theme #divPasso3 h2,
+ body.dark-theme #divCliente1 h2,
+ body.dark-theme #divCliente2 h2,
+ body.dark-theme #divLogin h2 {
+     color: #ff8a3d
+ }
+
+ body.dark-theme .spacesCardsBtnsServices button,
+ body.dark-theme .divEmailcotinue input:not([type="file"]),
+ body.dark-theme #formLogin input:not([type="file"]),
+ body.dark-theme #formCliente input:not([type="file"]),
+ body.dark-theme #formVendedor input:not([type="file"]),
+ body.dark-theme #formVendedor1 input:not([type="file"]),
+ body.dark-theme #formVendedor3 input:not([type="file"]),
+ body.dark-theme #formVendedor select,
+ body.dark-theme #formVendedor1 select,
+ body.dark-theme .dataEspace select,
+ body.dark-theme #descriptionBus {
+     background: #26292d;
+     border-color: #3a3e44;
+     color: #e8eaed
+ }
+
+ body.dark-theme .espacoCategoeias button {
+     background: #26292d;
+     border-color: rgba(222, 103, 6, .45);
+     color: #ff8a3d
+ }
+
+ body.dark-theme .espacoCategoeias button:hover {
+     background: rgba(222, 103, 6, .18)
+ }
+
+ body.dark-theme .avatarUpload .divShowAvatarUser {
+     background: #26292d;
+     border-color: rgba(222, 103, 6, .4)
+ }
+
+ body.dark-theme .avatarUpload .iconeCamera {
+     border-color: #1e2023
+ }
+
+ body.dark-theme .hintCampo,
+ body.dark-theme .dataEspace>label,
+ body.dark-theme .blocoCampo>label,
+ body.dark-theme .labelAvatar {
+     color: #9aa0a6
+ }
+
+ body.dark-theme .linkVoltar {
+     color: #9aa0a6
+ }
+
+ body.dark-theme .linkVoltar:hover {
+     color: #ff8a3d
+ }
+
+ body.dark-theme .password-requirements {
+     background: #26292d;
+     border-color: #3a3e44
+ }
+
+ body.dark-theme .req-item {
+     color: #9aa0a6
+ }
+
+ body.dark-theme .req-item svg {
+     stroke: #9aa0a6
+ }
+
+ body.dark-theme .separadorOu {
+     color: #6b7075
+ }
+
+ body.dark-theme .separadorOu::before,
+ body.dark-theme .separadorOu::after {
+     background: #3a3e44
+ }
+
+ body.dark-theme .btnSecundario {
+     background: #3a2a1c !important;
+     color: #ff8a3d !important
+ }
+
+ body.dark-theme .toast {
+     background: #26292d;
+     color: #e8eaed;
+     box-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3)
+ }
+
+ body.dark-theme #espcaoload {
+     background-color: rgba(22, 24, 27, .72)
+ }
+
+ body.dark-theme select {
+     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ff8a3d' stroke-width='2.4'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+ }
+
+ body.dark-theme input:focus,
+ body.dark-theme select:focus,
+ body.dark-theme textarea:focus {
+     box-shadow: 0 0 0 3px rgba(222, 103, 6, .3)
+ }
+
+ body.dark-theme input.is-valid,
+ body.dark-theme select.is-valid,
+ body.dark-theme textarea.is-valid {
+     box-shadow: 0 0 0 3px rgba(46, 125, 50, .3) !important
+ }
+
+ body.dark-theme input.is-invalid,
+ body.dark-theme select.is-invalid,
+ body.dark-theme textarea.is-invalid {
+     box-shadow: 0 0 0 3px rgba(211, 47, 47, .3) !important
  }

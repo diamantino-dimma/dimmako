@@ -3,6 +3,10 @@ const email = document.getElementById("email");
 const switchTypeUser = document.getElementById("switchTypeUser");
 const espacoOptionAuth = document.getElementById("espacoOptionAuth");
 let listElementNone = [espacoOptionAuth, elemento];
+let cadastroEmProcesso = false;
+
+// Tema escuro por padrão (sincroniza com a preferência escolhida na home)
+if (localStorage.getItem("dimmakoTema") !== "claro") document.body.classList.add("dark-theme");
 
 // Armazenamento em memória das fotos/logótipos carregados
 window.empresaFotoBase64 = null;
@@ -24,7 +28,13 @@ function mostrarToast(mensagem, tipo = "info", duracao = 3500) {
     toast.className = `toast toast-${tipo}`;
     const icone = SVGS_TOAST[tipo] || SVGS_TOAST.info;
 
-    toast.innerHTML = `<span class="toast-icone">${icone}</span><span class="toast-texto">${mensagem}</span>`;
+    const icon = document.createElement("span");
+    icon.className = "toast-icone";
+    icon.innerHTML = icone;
+    const texto = document.createElement("span");
+    texto.className = "toast-texto";
+    texto.textContent = String(mensagem);
+    toast.append(icon, texto);
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -60,15 +70,15 @@ async function uploadImagemImgBB(ficheiro) {
 
 // ---- Sanitização e validação ----
 function sanitizarTexto(valor) {
-    return (valor || "").replace(/[<>]/g, "").trim();
+    return String(valor || "").normalize("NFC").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim();
 }
 
 function ehEmailValido(valor) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
+    return valor.length <= 254 && /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,63}$/i.test(valor);
 }
 
 function ehTelefoneValido(valor) {
-    return /^[+]?[\d\s]{9,15}$/.test(valor);
+    return /^\+?[\d\s().-]+$/.test(valor) && valor.replace(/\D/g, "").length >= 9 && valor.replace(/\D/g, "").length <= 15;
 }
 
 function ehEmailOuTelefoneValido(valor) {
@@ -77,13 +87,144 @@ function ehEmailOuTelefoneValido(valor) {
 
 function marcarValidacao(campo, valido) {
     if (!campo) return;
-    if (valido) {
-        campo.classList.remove("is-invalid");
-        campo.classList.add("is-valid");
-    } else {
-        campo.classList.remove("is-valid");
-        campo.classList.add("is-invalid");
+    campo.classList.toggle("is-invalid", !valido);
+    campo.classList.toggle("is-valid", valido);
+    campo.setAttribute("aria-invalid", String(!valido));
+    const mensagem = campo.parentElement.querySelector(`[data-validation-for="${campo.id}"]`);
+    if (mensagem) mensagem.hidden = valido;
+}
+
+function definirErroCampo(campo, valido, mensagemErro) {
+    if (!campo) return valido;
+    let mensagem = campo.parentElement.querySelector(`[data-validation-for="${campo.id}"]`);
+    if (!mensagem) {
+        mensagem = document.createElement("small");
+        mensagem.className = "field-validation-message";
+        mensagem.dataset.validationFor = campo.id;
+        mensagem.id = `${campo.id}Error`;
+        mensagem.setAttribute("role", "alert");
+        campo.insertAdjacentElement("afterend", mensagem);
     }
+    mensagem.textContent = valido ? "" : mensagemErro;
+    mensagem.hidden = valido;
+    campo.setAttribute("aria-describedby", mensagem.id);
+    marcarValidacao(campo, valido);
+    return valido;
+}
+
+function dataNascimentoValida() {
+    const dia = Number(document.getElementById("dia")?.value);
+    const mes = Number(document.getElementById("mes")?.value);
+    const ano = Number(document.getElementById("ano")?.value);
+    if (!dia || !mes || !ano) return false;
+    const nascimento = new Date(ano, mes - 1, dia);
+    if (nascimento.getFullYear() !== ano || nascimento.getMonth() !== mes - 1 || nascimento.getDate() !== dia) return false;
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - ano;
+    if (hoje.getMonth() < mes - 1 || (hoje.getMonth() === mes - 1 && hoje.getDate() < dia)) idade--;
+    return idade >= 18 && idade <= 120;
+}
+
+function validarFicheiroImagem(input) {
+    const ficheiro = input?.files?.[0];
+    if (!ficheiro) return true;
+    return ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(ficheiro.type) && ficheiro.size > 0 && ficheiro.size <= 10 * 1024 * 1024;
+}
+
+async function imagemComAssinaturaValida(ficheiro) {
+    const bytes = new Uint8Array(await ficheiro.slice(0, 12).arrayBuffer());
+    const comecaPor = valores => valores.every((valor, indice) => bytes[indice] === valor);
+    if (ficheiro.type === "image/jpeg") return comecaPor([0xff, 0xd8, 0xff]);
+    if (ficheiro.type === "image/png") return comecaPor([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    if (ficheiro.type === "image/gif") return String.fromCharCode(...bytes.slice(0, 6)).match(/^GIF8[79]a$/) !== null;
+    if (ficheiro.type === "image/webp") return String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP";
+    return false;
+}
+
+function validarCampoCadastro(id, mostrarErro = true) {
+    const campo = document.getElementById(id);
+    if (!campo) return true;
+    const valor = campo.type === "password" ? campo.value : sanitizarTexto(campo.value);
+    let valido = false;
+    let erro = "Verifique este campo.";
+    switch (id) {
+        case "email":
+        case "emailCliente":
+        case "loginIdentificador":
+            valido = ehEmailOuTelefoneValido(valor);
+            erro = "Introduza um email ou telefone válido.";
+            break;
+        case "nomeCompletoVendedor":
+        case "nomeCliente":
+            valido = valor.length >= 2 && valor.length <= 80 && /^[\p{L}\p{M}][\p{L}\p{M} .'-]*$/u.test(valor);
+            erro = "Use um nome válido, entre 2 e 80 caracteres.";
+            break;
+        case "biVendedor":
+            valido = /^[\p{L}\d-]{6,30}$/u.test(valor);
+            erro = "O BI deve ter entre 6 e 30 letras ou números.";
+            break;
+        case "senhaVendedor":
+        case "senhaCliente":
+            valido = verificarRequisitosSenha(valor, id === "senhaVendedor" ? "req_senhaVendedor" : "req_senhaCliente") && valor.length <= 128;
+            erro = "A senha deve cumprir os requisitos indicados e ter no máximo 128 caracteres.";
+            break;
+        case "confirmarSenhaVendedor":
+        case "confirmarSenhaCliente":
+            valido = valor.length > 0 && valor === document.getElementById(id === "confirmarSenhaVendedor" ? "senhaVendedor" : "senhaCliente")?.value;
+            erro = "As palavras-passe não coincidem.";
+            break;
+        case "nomeEmpresa":
+            valido = valor.length >= 2 && valor.length <= 100;
+            erro = "O nome da empresa deve ter entre 2 e 100 caracteres.";
+            break;
+        case "emailEmpresa":
+            valido = ehEmailValido(valor);
+            erro = "Introduza um email empresarial válido.";
+            break;
+        case "telefoneEmpresa":
+            valido = ehTelefoneValido(valor);
+            erro = "Introduza um telefone com 9 a 15 dígitos.";
+            break;
+        case "descriptionBus":
+            valido = valor.length >= 10 && valor.length <= 500;
+            erro = "A descrição deve ter entre 10 e 500 caracteres.";
+            break;
+        case "loginSenha":
+            valido = campo.value.length >= 1 && campo.value.length <= 128;
+            erro = "Introduza a sua senha (máximo de 128 caracteres).";
+            break;
+        case "dia":
+        case "mes":
+        case "ano":
+            valido = dataNascimentoValida();
+            erro = "Indique uma data real e confirme que tem pelo menos 18 anos.";
+            break;
+        case "sexoVendedor":
+            valido = ["Masculino", "Feminino", "Outro"].includes(valor);
+            erro = "Selecione uma opção válida.";
+            break;
+        case "logotipoEmpresa":
+        case "fotoPerfilCliente":
+            valido = validarFicheiroImagem(campo);
+            erro = "Use uma imagem JPG, PNG, WebP ou GIF até 10 MB.";
+            break;
+    }
+    if (mostrarErro) definirErroCampo(campo, valido, erro);
+    return valido;
+}
+
+function validarCampos(ids) {
+    const resultados = ids.map(id => validarCampoCadastro(id, true));
+    const categorias = document.querySelectorAll("#categoriasNegocio button.seleccionado");
+    if (ids.includes("categoriaNegocio") && categorias.length !== 1) {
+        mostrarToast("Selecione uma categoria para o seu negócio.", "erro");
+        return false;
+    }
+    if (ids.some(id => ["dia", "mes", "ano"].includes(id)) && !dataNascimentoValida()) {
+        ["dia", "mes", "ano"].forEach(id => definirErroCampo(document.getElementById(id), false, "Indique uma data real e confirme que tem pelo menos 18 anos."));
+        return false;
+    }
+    return resultados.every(Boolean);
 }
 
 // ---- Verificação dos 4 Requisitos de Senha com Feedback em Tempo Real ----
@@ -143,49 +284,23 @@ function configurarRequisitosSenhas() {
 }
 
 function configurarValidacaoEmTempoReal() {
-    const validadores = {
-        email: val => ehEmailOuTelefoneValido(val.trim()),
-        loginIdentificador: val => val.trim().length > 0,
-        loginSenha: val => val.length >= 6,
-        nomeCompletoVendedor: val => val.trim().length >= 3,
-        paisVendedor: val => val.trim().length >= 2,
-        biVendedor: val => val.trim().length >= 6,
-        senhaVendedor: val => verificarRequisitosSenha(val, "req_senhaVendedor"),
-        confirmarSenhaVendedor: val => {
-            const s = document.getElementById("senhaVendedor")?.value || "";
-            return val.length >= 8 && val === s;
-        },
-        nomeEmpresa: val => val.trim().length >= 2,
-        emailEmpresa: val => ehEmailValido(val.trim()),
-        telefoneEmpresa: val => ehTelefoneValido(val.trim()),
-        descriptionBus: val => val.trim().length >= 5,
-        nomeCliente: val => val.trim().length >= 2,
-        emailCliente: val => ehEmailOuTelefoneValido(val.trim()),
-        senhaCliente: val => verificarRequisitosSenha(val, "req_senhaCliente"),
-        confirmarSenhaCliente: val => {
-            const s = document.getElementById("senhaCliente")?.value || "";
-            return val.length >= 8 && val === s;
-        }
-    };
-
-    Object.entries(validadores).forEach(([id, fn]) => {
+    const ids = ["email", "nomeCompletoVendedor", "biVendedor", "senhaVendedor", "confirmarSenhaVendedor", "nomeEmpresa", "emailEmpresa", "telefoneEmpresa", "descriptionBus", "nomeCliente", "emailCliente", "senhaCliente", "confirmarSenhaCliente", "loginIdentificador", "loginSenha", "dia", "mes", "ano", "sexoVendedor", "logotipoEmpresa", "fotoPerfilCliente"];
+    ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            el.addEventListener("input", () => {
-                marcarValidacao(el, fn(el.value));
-            });
+            const atualizar = () => {
+                if (el.type === "password") verificarRequisitosSenha(el.value, id === "senhaVendedor" ? "req_senhaVendedor" : "req_senhaCliente");
+                if (el.dataset.validationTouched === "true") validarCampoCadastro(id);
+            };
+            el.addEventListener("input", atualizar);
             el.addEventListener("change", () => {
-                marcarValidacao(el, fn(el.value));
+                el.dataset.validationTouched = "true";
+                validarCampoCadastro(id);
             });
-        }
-    });
-
-    // Validação em tempo real para selects no evento onchange
-    ["dia", "mes", "ano", "sexoVendedor"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener("change", () => {
-                marcarValidacao(el, el.value !== "");
+            el.addEventListener("blur", () => {
+                if (el.type !== "password" && el.type !== "file") el.value = sanitizarTexto(el.value);
+                el.dataset.validationTouched = "true";
+                validarCampoCadastro(id);
             });
         }
     });
@@ -233,14 +348,8 @@ function popularSelectsNascimento() {
 
 function confirmarEmail() {
     const valor = sanitizarTexto(email.value);
-    if (!valor) {
-        mostrarToast("Por favor, indique o seu email ou telefone.", "erro");
-        return;
-    }
-    if (!ehEmailOuTelefoneValido(valor)) {
-        mostrarToast("Introduza um email ou número de telefone válido.", "erro");
-        return;
-    }
+    email.value = valor;
+    if (!validarCampos(["email"])) return;
     elemento.style.display = "flex";
     setTimeout(() => {
         listElementNone.forEach((element) => {
@@ -291,8 +400,12 @@ function voltarPasso(idAtual, idAnterior, passoAtualId) {
 
 function selecionarUnico(botao) {
     const irmaos = botao.parentElement.querySelectorAll("button");
-    irmaos.forEach((b) => b.classList.remove("seleccionado"));
+    irmaos.forEach((b) => {
+        b.classList.remove("seleccionado");
+        b.setAttribute("aria-pressed", "false");
+    });
     botao.classList.add("seleccionado");
+    botao.setAttribute("aria-pressed", "true");
 }
 
 function alternarSeleccao(botao) {
@@ -306,17 +419,19 @@ async function mostrarPreview(inputId, previewId) {
 
     if (!ficheiro) return;
 
-    if (!ficheiro.type.startsWith("image/")) {
-        mostrarToast("Por favor, seleccione apenas ficheiros de imagem (JPG, PNG, etc.).", "erro");
+    if (!validarFicheiroImagem(input)) {
+        definirErroCampo(input, false, "Use uma imagem JPG, PNG, WebP ou GIF até 10 MB.");
+        mostrarToast("Use uma imagem JPG, PNG, WebP ou GIF até 10 MB.", "erro");
         input.value = "";
         return;
     }
-    const tamanhoMaximoMB = 10;
-    if (ficheiro.size > tamanhoMaximoMB * 1024 * 1024) {
-        mostrarToast("A imagem deve ter no máximo " + tamanhoMaximoMB + "MB.", "erro");
+    if (!await imagemComAssinaturaValida(ficheiro)) {
+        definirErroCampo(input, false, "O conteúdo do ficheiro não corresponde a uma imagem válida.");
+        mostrarToast("O ficheiro selecionado não é uma imagem válida.", "erro");
         input.value = "";
         return;
     }
+    definirErroCampo(input, true, "");
 
     const backupHTML = preview.innerHTML;
     preview.innerHTML = `<div class="spinner" style="width:26px;height:26px;border-width:3px;margin:auto;"></div>`;
@@ -339,26 +454,9 @@ async function mostrarPreview(inputId, previewId) {
 }
 
 function avancarPasso2Vendedor() {
-    const nomeCompleto = sanitizarTexto(document.getElementById("nomeCompletoVendedor").value);
-    const pais = sanitizarTexto(document.getElementById("paisVendedor").value);
-    const bi = sanitizarTexto(document.getElementById("biVendedor").value);
-    const senha = document.getElementById("senhaVendedor").value;
-    const confirmarSenha = document.getElementById("confirmarSenhaVendedor").value;
-
-    if (!nomeCompleto || !pais || !bi) {
-        mostrarToast("Preencha o nome completo, o país e o número do BI.", "erro");
-        return;
-    }
-    if (!senha || !confirmarSenha) {
-        mostrarToast("Defina uma senha e confirme-a.", "erro");
-        return;
-    }
-    if (senha.length < 6) {
-        mostrarToast("A senha deve ter pelo menos 6 caracteres.", "erro");
-        return;
-    }
-    if (senha !== confirmarSenha) {
-        mostrarToast("As senhas não coincidem.", "erro");
+    const ids = ["nomeCompletoVendedor", "dia", "mes", "ano", "sexoVendedor", "biVendedor", "senhaVendedor", "confirmarSenhaVendedor"];
+    if (!validarCampos(ids)) {
+        mostrarToast("Corrija os campos assinalados antes de continuar.", "erro");
         return;
     }
 
@@ -366,20 +464,9 @@ function avancarPasso2Vendedor() {
 }
 
 function avancarPasso3Vendedor() {
-    const nomeEmpresa = sanitizarTexto(document.getElementById("nomeEmpresa").value);
-    const emailEmpresa = sanitizarTexto(document.getElementById("emailEmpresa").value);
-    const telefoneEmpresa = sanitizarTexto(document.getElementById("telefoneEmpresa").value);
-
-    if (!nomeEmpresa || !emailEmpresa || !telefoneEmpresa) {
-        mostrarToast("Preencha o nome da empresa, o email e o telefone.", "erro");
-        return;
-    }
-    if (!ehEmailValido(emailEmpresa)) {
-        mostrarToast("Introduza um email válido para a empresa.", "erro");
-        return;
-    }
-    if (!ehTelefoneValido(telefoneEmpresa)) {
-        mostrarToast("Introduza um número de telefone válido.", "erro");
+    const ids = ["nomeEmpresa", "emailEmpresa", "telefoneEmpresa", "categoriaNegocio"];
+    if (!validarCampos(ids)) {
+        mostrarToast("Corrija os campos e selecione uma categoria para continuar.", "erro");
         return;
     }
 
@@ -403,6 +490,13 @@ function guardarContaCompleta(conta) {
 }
 
 function finalizarCadastroVendedor() {
+    if (cadastroEmProcesso) return;
+    const ids = ["nomeCompletoVendedor", "dia", "mes", "ano", "sexoVendedor", "biVendedor", "senhaVendedor", "confirmarSenhaVendedor", "nomeEmpresa", "emailEmpresa", "telefoneEmpresa", "categoriaNegocio", "descriptionBus", "logotipoEmpresa"];
+    if (!validarCampos(ids)) {
+        mostrarToast("Corrija os campos assinalados antes de concluir o cadastro.", "erro");
+        return;
+    }
+    cadastroEmProcesso = true;
     const passo4 = document.getElementById("passo4");
     if (passo4) {
         passo4.style.background = "#de6706";
@@ -412,7 +506,6 @@ function finalizarCadastroVendedor() {
     elemento.style.display = "flex";
 
     const nomeCompleto = sanitizarTexto(document.getElementById("nomeCompletoVendedor").value);
-    const pais = sanitizarTexto(document.getElementById("paisVendedor").value);
     const sexo = document.getElementById("sexoVendedor").value;
     const bi = sanitizarTexto(document.getElementById("biVendedor").value);
     const dia = document.getElementById("dia").value;
@@ -423,7 +516,6 @@ function finalizarCadastroVendedor() {
     const telefoneEmpresa = sanitizarTexto(document.getElementById("telefoneEmpresa").value);
     const categoriaBtn = document.querySelector("#categoriasNegocio button.seleccionado");
     const categoria = categoriaBtn ? categoriaBtn.textContent.trim() : "Comércio Geral";
-    const formasPagamento = Array.from(document.querySelectorAll("#formasPay button.seleccionado")).map(b => b.title || b.textContent.trim());
     const descricao = sanitizarTexto(document.getElementById("descriptionBus").value);
     const senha = document.getElementById("senhaVendedor").value;
     const foto = window.empresaFotoBase64 || null;
@@ -437,12 +529,10 @@ function finalizarCadastroVendedor() {
         nomeEmpresa: nomeEmpresa,
         emailEmpresa: emailEmpresa,
         telefoneEmpresa: telefoneEmpresa,
-        pais: pais,
         sexo: sexo,
         bi: bi,
         dataNasc: `${dia}/${mes}/${ano}`,
         categoria: categoria,
-        formasPagamento: formasPagamento,
         descricao: descricao,
         foto: foto
     };
@@ -470,6 +560,12 @@ function irParaCliente() {
 }
 
 function cadastrarCliente() {
+    if (cadastroEmProcesso) return;
+    if (!validarCampos(["nomeCliente", "emailCliente", "senhaCliente", "confirmarSenhaCliente", "fotoPerfilCliente"])) {
+        mostrarToast("Corrija os campos assinalados antes de concluir o cadastro.", "erro");
+        return;
+    }
+    cadastroEmProcesso = true;
     const nome = sanitizarTexto(document.getElementById("nomeCliente").value);
     const emailCliente = sanitizarTexto(document.getElementById("emailCliente").value).toLowerCase();
     const senha = document.getElementById("senhaCliente").value;
@@ -561,9 +657,9 @@ function fecharLogin() {
 function fazerLogin() {
     const identificador = sanitizarTexto(document.getElementById("loginIdentificador").value).toLowerCase();
     const senha = document.getElementById("loginSenha").value;
-
-    if (!identificador || !senha) {
-        mostrarToast("Preencha o email/telefone e a senha.", "erro");
+    document.getElementById("loginIdentificador").value = identificador;
+    if (!validarCampos(["loginIdentificador", "loginSenha"])) {
+        mostrarToast("Introduza um email ou telefone válido e a sua senha.", "erro");
         return;
     }
 

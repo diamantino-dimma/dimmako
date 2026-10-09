@@ -17,7 +17,7 @@
     </div>
     <div class="spaceWallForms">
         <div class="headerForms">
-            <img src="dimako-icone-laranja.png" alt="Logótipo Dimmako">
+            <img class="headerForms-logo" src="dimako-icone-laranja.png" alt="Dimako" draggable="false">
             <h2>Dimmako</h2>
             <button type="button" id="btnEntrar" onclick="abrirLogin()">Entrar</button>
         </div>
@@ -59,7 +59,8 @@
             <span class="separadorOu">ou</span>
             <div class="divEmailcotinue">
 
-                <input type="email" name="" id="email" placeholder="Email ou telefone">
+                <input type="text" name="emailOuTelefone" id="email" inputmode="email" maxlength="254"
+                    autocomplete="username" placeholder="Email ou telefone">
                 <label for="email" class="hintCampo">Introduza um e-mail ou telefone válido</label>
                 <button type="button" onclick="confirmarEmail()">
                     Confirmar
@@ -110,7 +111,6 @@
                             </select>
                         </div>
                     </div>
-                    <input type="text" id="paisVendedor" placeholder="País" style="display: none;">
                     <select name="" id="sexoVendedor">
                         <option value="">Sexo</option>
                     </select>
@@ -204,20 +204,6 @@
                     </label>
                     <span class="labelAvatar">Adicione o logótipo da sua empresa</span>
 
-                    <div class="blocoCampo">
-                        <label for="">Selecione as formas de pagamento aceites</label>
-                        <div class="espacoCategoeias" id="formasPay">
-                            <button type="button" title="Multicaixa Express" onclick="alternarSeleccao(this)">
-                                <img src="assets/multicaixaExpress.png" alt="Multicaixa Express">
-                            </button>
-                            <button type="button" title="Transferência Bancária" onclick="alternarSeleccao(this)">
-                                <img src="assets/transafrenciaBancaria.jpeg" alt="Transferência Bancária">
-                            </button>
-                            <button type="button" title="Visa" onclick="alternarSeleccao(this)">
-                                <img src="assets/visa.png" alt="Visa">
-                            </button>
-                        </div>
-                    </div>
                     <textarea placeholder="Fale um pouco sobre a sua empresa" id="descriptionBus"></textarea>
                     <button type="button" onclick="finalizarCadastroVendedor()">Concluir cadastro</button>
 
@@ -249,7 +235,8 @@
                     </label>
                     <span class="labelAvatar">Adicione a sua foto de perfil (opcional)</span>
                     <input type="text" id="nomeCliente" placeholder="Nome Completo">
-                    <input type="email" id="emailCliente" placeholder="Email ou telefone">
+                    <input type="text" id="emailCliente" inputmode="email" maxlength="254" autocomplete="email"
+                        placeholder="Email ou telefone">
                     <input type="password" id="senhaCliente" placeholder="Senha">
                     <div class="password-requirements" id="req_senhaCliente">
                         <span class="req-item" data-req="num">

@@ -6,13 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dimma | Início</title>
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
-    <link rel="stylesheet" href="styles/home.css">
+    <link rel="stylesheet" href="styles/home.css?v=post-actions-2">
 </head>
 
 <body>
     <div class="app">
         <aside class="sidebar">
-            <div class="brand"><img src="assets/dimako-icone-laranja.png" alt="Logotipo Dimma">
+            <div class="brand">
+                <img class="brand-logo" src="dimako-icone-laranja.png" alt="Dimako" draggable="false">
                 <div><strong>Dimmako</strong><small>conecte-se</small></div>
             </div>
             <div class="nav-title">Menu principal</div>
@@ -20,17 +21,17 @@
                 <button class="active" data-view="inicio"><svg viewBox="0 0 24 24">
                         <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" />
                         <path d="M9 21v-7h6v7" />
-                    </svg><span>Início</span></button>
+                    </svg><span>Início</span><span class="nav-badge" data-badge="inicio"></span></button>
                 <button data-view="mapa"><svg viewBox="0 0 24 24">
                         <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
                         <circle cx="12" cy="10" r="2.5" />
                     </svg><span>Mapa</span></button>
                 <button data-view="notificacoes"><svg viewBox="0 0 24 24">
                         <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
-                    </svg><span>Notificações</span></button>
+                    </svg><span>Notificações</span><span class="nav-badge" data-badge="notificacoes"></span></button>
                 <button data-view="vendas"><svg viewBox="0 0 24 24">
                         <path d="M3 4h18l-2 8H7L5 4M7 12l-2 8h14l-2-8M9 16h6" />
-                    </svg><span>Vendas</span></button>
+                    </svg><span>Vendas</span><span class="nav-badge" data-badge="vendas"></span></button>
                 <button data-view="historico"><svg viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="9" />
                         <path d="M12 7v5l3 2" />
@@ -54,8 +55,9 @@
         <main class="main">
             <header class="topbar">
                 <div class="mobile-header-row">
-                    <div class="mobile-brand"><img src="assets/dimako-icone-laranja.png" alt="Logo"
-                            style="width:28px;height:28px;max-width:28px;aspect-ratio:1/1;object-fit:contain;flex-shrink:0;vertical-align:middle;margin-right:6px;">Dimmako
+                    <div class="mobile-brand">
+                        <img class="mobile-brand-logo" src="dimako-icone-laranja.png" alt="Dimako"
+                            draggable="false">Dimmako
                     </div>
                     <div class="mobile-account-bar">
                         <div class="mobile-account-user">
@@ -65,12 +67,12 @@
                         <button class="mobile-notifications" type="button" aria-label="Notificações"><svg
                                 viewBox="0 0 24 24">
                                 <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
-                            </svg></button>
+                            </svg><span class="nav-badge" data-badge="notificacoes"></span></button>
                     </div>
                 </div>
                 <div class="search-area">
                     <div class="search">
-                       <input id="postSearch" type="search" placeholder="Pesquisar usuários e publicações...">
+                        <input id="postSearch" type="search" placeholder="Pesquisar usuários e publicações...">
                     </div>
                     <button class="publish-button" id="publishPost" type="button">Publicar</button>
                 </div>
@@ -85,18 +87,75 @@
                                 viewBox="0 0 24 24">
                                 <path d="m15 18-6-6 6-6" />
                             </svg></button>
-                        <div class="filter-track" id="filterTrack">
-                            <button class="active" data-category="Todos">Todos</button>
-                            <button data-category="Vestuários">Vestuários</button>
-                            <button data-category="Construção">Construção</button>
-                            <button data-category="Tecnologia">Tecnologia</button>
-                            <button data-category="Comidas">Comidas</button>
-                            <button data-category="Acessórios">Acessórios</button>
-                            <button data-category="Imobiliária">Imobiliária</button>
-                            <button data-category="Escola">Escola</button>
-                            <button data-category="Imóveis">Imóveis</button>
-                            <button data-category="Veículos">Veículos</button>
-                            <button data-category="Outro">Outro</button>
+                        <div class="filter-track" id="filterTrack" role="group"
+                            aria-label="Escolha a categoria do seu negócio">
+                            <button class="active" type="button" data-category="Todos" aria-pressed="true"><svg
+                                    viewBox="0 0 24 24" aria-hidden="true">
+                                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                                    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                                </svg>Todos</button>
+                            <button type="button" data-category="Vestuários" aria-pressed="false"><svg
+                                    viewBox="0 0 24 24" aria-hidden="true">
+                                    <path
+                                        d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23Z" />
+                                </svg>Vestuários</button>
+                            <button type="button" data-category="Construção" aria-pressed="false"><svg
+                                    viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M4 17a8 8 0 0 1 16 0v1H4z" />
+                                    <path d="M12 9V6" />
+                                    <path d="M10 6h4" />
+                                </svg>Construção</button>
+                            <button type="button" data-category="Tecnologia" aria-pressed="false"><svg
+                                    viewBox="0 0 24 24" aria-hidden="true">
+                                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                                    <rect x="9" y="9" width="6" height="6" />
+                                    <path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2" />
+                                </svg>Tecnologia</button>
+                            <button type="button" data-category="Comidas" aria-pressed="false"><svg viewBox="0 0 24 24"
+                                    aria-hidden="true">
+                                    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+                                    <path d="M7 2v20" />
+                                    <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+                                </svg>Comidas</button>
+                            <button type="button" data-category="Acessórios" aria-pressed="false"><svg
+                                    viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M12 2H2v10l9.3 9.3a2 2 0 0 0 2.8 0l7.2-7.2a2 2 0 0 0 0-2.8z" />
+                                    <circle cx="7" cy="7" r="1.5" />
+                                </svg>Acessórios</button>
+                            <button type="button" data-category="Imobiliária" aria-pressed="false"><svg
+                                    viewBox="0 0 24 24" aria-hidden="true">
+                                    <rect x="4" y="2" width="16" height="20" rx="2" />
+                                    <path d="M9 22v-4h6v4" />
+                                    <path
+                                        d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01" />
+                                </svg>Imobiliária</button>
+                            <button type="button" data-category="Escola" aria-pressed="false"><svg viewBox="0 0 24 24"
+                                    aria-hidden="true">
+                                    <path d="M22 10 12 5 2 10l10 5 10-5z" />
+                                    <path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
+                                    <path d="M22 10v6" />
+                                </svg>Escola</button>
+                            <button type="button" data-category="Imóveis" aria-pressed="false"><svg viewBox="0 0 24 24"
+                                    aria-hidden="true">
+                                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                    <polyline points="9 22 9 12 15 12 15 22" />
+                                </svg>Imóveis</button>
+                            <button type="button" data-category="Veículos" aria-pressed="false"><svg viewBox="0 0 24 24"
+                                    aria-hidden="true">
+                                    <path
+                                        d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                                    <circle cx="7" cy="17" r="2" />
+                                    <path d="M9 17h6" />
+                                    <circle cx="17" cy="17" r="2" />
+                                </svg>Veículos</button>
+                            <button type="button" data-category="Outro" aria-pressed="false"><svg viewBox="0 0 24 24"
+                                    aria-hidden="true">
+                                    <circle cx="5" cy="12" r="1" />
+                                    <circle cx="12" cy="12" r="1" />
+                                    <circle cx="19" cy="12" r="1" />
+                                </svg>Outro</button>
                         </div>
                         <button class="filter-arrow" id="filterNext" type="button" aria-label="Próximos filtros"><svg
                                 viewBox="0 0 24 24">
@@ -106,28 +165,54 @@
                     <div id="posts"></div>
                 </section>
                 <section id="telaMap" class="page-screen" aria-labelledby="mapTitle">
-                    <div class="screen-heading">
-                        <div>
+                    <header class="screen-heading">
+                        <div class="heading-text">
                             <h1 id="mapTitle">Explorar o mapa</h1>
                             <p>Encontre vendedores e serviços perto de você.</p>
                         </div>
-                    </div>
+
+                    </header>
                     <div class="map-toolbar">
-                        <label class="search"><svg viewBox="0 0 24 24">
-                                <circle cx="11" cy="11" r="7" />
-                                <path d="m20 20-4-4" />
-                            </svg><input id="mapSearch" type="search" placeholder="Pesquisar cidade ou localidade..."
-                                autocomplete="off"></label>
-                        <p>Explorando Angola em 3D</p>
-                        <div class="map-pitch-controls">
-                            <button type="button" id="mapPitchDown" aria-label="Reduzir inclinação">Inclinar -</button>
-                            <button type="button" id="mapPitchUp" aria-label="Aumentar inclinação">Inclinar +</button>
-                            <button type="button" id="mapResetView" aria-label="Repor vista">Vista 3D</button>
+                        <div class="map-toolbar-left">
+                            <button type="button" id="mapFullscreen" class="map-fullscreen-btn"
+                                aria-label="Ver mapa em ecrã inteiro" aria-pressed="false">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+                                </svg>
+                                <span>Ecrã inteiro</span>
+                            </button>
+                            <button type="button" id="mapLocate" class="map-locate-btn"
+                                aria-label="Ir para a minha localização" title="A minha localização">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="3.2"></circle>
+                                    <circle cx="12" cy="12" r="7.2"></circle>
+                                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path>
+                                </svg>
+                            </button>
+
+
+                        </div>
+                        <div class="map-search">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="11" cy="11" r="7"></circle>
+                                <path d="m20 20-3.5-3.5"></path>
+                            </svg>
+                            <input id="mapSearch" type="search" list="mapSearchOptions"
+                                placeholder="Pesquisar localidade (ex.: Kilamba Kixa, Sumbe, Kuito)..."
+                                autocomplete="off" aria-label="Pesquisar cidade ou localidade">
+                            <datalist id="mapSearchOptions"></datalist>
                         </div>
                     </div>
                     <div class="map-canvas" id="mapCanvas" role="application" aria-label="Mapa 3D interativo de Angola">
+                        <button type="button" id="mapOrigin" class="map-origin" hidden aria-live="polite"
+                            title="De onde vem esta localização">
+                            <span class="map-origin-dot" aria-hidden="true"></span>
+                            <span class="map-origin-texto">A obter localização…</span>
+                        </button>
                     </div>
-                    <p class="map-note">Mapa 3D MapLibre · Incline com dois dedos ou os controlos de pitch</p>
+
                 </section>
 
                 <section id="pageNotifications" class="page-screen" aria-labelledby="notificationsTitle">
@@ -261,175 +346,271 @@
                     </div>
                 </section>
 
-                <section id="pageConfiguracoes" class="page-screen" aria-labelledby="settingsTitle">
-                    <div class="screen-heading">
-                        <div>
-                            <h1 id="settingsTitle">Configurações</h1>
-                            <p>Gerencie suas preferências, privacidade e a segurança da conta.</p>
-                        </div>
+                <section id="pageHistorico" class="page-screen" aria-labelledby="historyTitle">
+                    <div class="form-field">
+                        <label for="btAccountType">Tipo de Conta</label>
+                        <select id="btAccountType" required>
+                            <option value="">Selecione o tipo de conta</option>
+                            <option value="singular">Pessoa Singular</option>
+                            <option value="coletiva">Pessoa Coletiva</option>
+                        </select>
                     </div>
-                    <div class="settings-list">
-                        <div class="settings-section-title">Aparência</div>
-                        <label class="setting-row">
-                            <div>
-                                <strong>Modo Escuro</strong>
-                                <p>Alternar entre o tema claro e o tema escuro na plataforma.</p>
-                            </div>
-                            <span class="switch">
-                                <input type="checkbox" id="themeSwitch">
-                                <span class="slider"></span>
-                            </span>
-                        </label>
-
-                        <div class="settings-section-title">Notificações</div>
-                        <label class="setting-row">
-                            <div>
-                                <strong>Notificações de pedidos</strong>
-                                <p>Receba alertas sobre novos pedidos e pagamentos.</p>
-                            </div>
-                            <span class="switch">
-                                <input type="checkbox" data-setting="orderNotifications" checked>
-                                <span class="slider"></span>
-                            </span>
-                        </label>
-                        <label class="setting-row">
-                            <div>
-                                <strong>Notificações de mensagens</strong>
-                                <p>Seja avisado quando receber uma mensagem.</p>
-                            </div>
-                            <span class="switch">
-                                <input type="checkbox" data-setting="messageNotifications" checked>
-                                <span class="slider"></span>
-                            </span>
-                        </label>
-
-                        <div class="settings-section-title">Privacidade</div>
-                        <label class="setting-row">
-                            <div>
-                                <strong>Perfil público</strong>
-                                <p>Qualquer pessoa pode ver o seu perfil</p>
-                            </div>
-                            <span class="switch">
-                                <input type="checkbox" data-setting="publicProfile" checked>
-                                <span class="slider"></span>
-                            </span>
-                        </label>
-                        <label class="setting-row">
-                            <div>
-                                <strong>Aparecer no mapa</strong>
-                                <p>Mostrar a sua localização aproximada</p>
-                            </div>
-                            <span class="switch">
-                                <input type="checkbox" data-setting="showOnMap" checked>
-                                <span class="slider"></span>
-                            </span>
-                        </label>
-                        <label class="setting-row">
-                            <div>
-                                <strong>Mostrar disponibilidade online</strong>
-                                <p>Seus contatos poderão ver quando você estiver online.</p>
-                            </div>
-                            <span class="switch">
-                                <input type="checkbox" data-setting="showOnline" checked>
-                                <span class="slider"></span>
-                            </span>
-                        </label>
+                    <div class="form-field">
+                        <label for="btHolder">Titular da Conta</label>
+                        <input id="btHolder" type="text" maxlength="80" placeholder="Nome completo do titular" required>
                     </div>
-                    <button class="screen-action" id="saveSettings" type="button" style="margin-top:20px">Guardar
-                        preferências</button><span id="settingsFeedback" role="status"
-                        style="color:#36805d;font-size:12px;margin-left:12px"></span>
-                    <br><br><br><br>
-                </section>
-
-                <section id="pagePerfil" class="page-screen" aria-labelledby="profileTitle">
-                    <div class="screen-heading">
-                        <div>
-                            <h1 id="profileTitle">Meu perfil</h1>
-                            <p>Informações da sua conta Dimma.</p>
-                        </div>
+                    <div class="form-field">
+                        <label for="btDocument">Documento de Identificação (BI / NIF)</label>
+                        <input id="btDocument" type="text" maxlength="20" placeholder="Ex.: 001234567LA043" required>
                     </div>
-                    <div class="profile-summary">
-                        <div class="avatar" id="profileAvatar">UD</div>
-                        <div><strong id="profileName">Utilizador Dimma</strong>
-                            <p id="profileType">Membro Dimma</p>
-                            <button class="profile-photo-btn" id="btnFotoPerfil" type="button">Alterar foto de
-                                perfil</button>
-                            <input type="file" id="profilePhotoInput" accept="image/*" hidden>
-                        </div>
+                    <div class="form-field">
+                        <label for="btBank">Banco</label>
+                        <select id="btBank" required>
+                            <option value="">Selecione o banco</option>
+                            <option>BAI</option>
+                            <option>BFA</option>
+                            <option>BIC</option>
+                            <option>Millennium Atlântico</option>
+                            <option>SOL</option>
+                            <option>BCI</option>
+                            <option>Keve</option>
+                            <option>Standard Bank Angola</option>
+                            <option value="outro">Outro</option>
+                        </select>
                     </div>
-                    <div class="form-field"><label for="profileNameInput">Nome</label><input id="profileNameInput"
-                            type="text" placeholder="Seu nome"></div>
-                    <div class="form-field"><label for="profileEmailInput">Email ou telefone</label><input
-                            id="profileEmailInput" type="text" readonly></div>
-                    <div class="form-field" id="profileCompanyField" style="display: none;"><label
-                            for="profileCompanyInput">Empresa / Negócio</label><input id="profileCompanyInput"
-                            type="text" readonly></div>
-                    <div class="form-field" id="profileBioField" style="display: none;"><label
-                            for="profileBioInput">Sobre o negócio</label><textarea id="profileBioInput" rows="3"
-                            readonly
-                            style="width:100%;border-radius:10px;border:1px solid var(--line);padding:10px;font-family:inherit;resize:none;background:#fdfcfb;color:inherit;"></textarea>
+                    <div class="form-field">
+                        <label for="btAccountNumber">Número da Conta Bancária
+                            <span class="optional-tag">(opcional)</span></label>
+                        <input id="btAccountNumber" type="text" inputmode="numeric" placeholder="Ex.: 0001234567890">
                     </div>
-                    <button class="screen-action" id="saveProfile" type="button">Guardar perfil</button>
-                    <button class="screen-action" id="profileSettings" type="button"
-                        style="background:transparent;border:1px solid var(--line);color:var(--dark);margin-left:8px">Abrir
-                        configurações</button>
-                    <br><br><br><br>
-                </section>
-
-
-                <aside class="chat-panel">
-                    <button class="mobile-chat-close" id="mobileChatClose" type="button" aria-label="Fechar chat"><svg
-                            viewBox="0 0 24 24">
-                            <path d="m15 18-6-6 6-6" />
-                            <path d="M9 12h11" />
-                        </svg></button>
-                    <div class="friends-view" id="friendsView">
-                        <div class="chat-header">
-                            <h2>Seus amigos</h2>
-                            <p>Converse com quem está online</p>
-                        </div>
-                        <input class="friend-search" id="friendSearch" placeholder="Buscar amigo..."
-                            aria-label="Buscar amigo">
-                        <div class="friends" id="friends"></div>
+                    <div class="form-field">
+                        <label for="btIban">IBAN</label>
+                        <input id="btIban" type="text" inputmode="numeric" placeholder="AO06.XXXX.XXXX.XXXX.XXXX.X"
+                            required autocomplete="off">
+                        <small class="field-help">Deve iniciar com <strong>AO06</strong> e ter 21
+                            caracteres. Pode consultar o seu IBAN no app do seu banco ou no Multicaixa
+                            Express.</small>
+                        <small class="field-help" id="btIbanCounter">0 de 21 caracteres</small>
                     </div>
-                    <div class="conversation" id="conversation">
-                        <div class="conversation-title">
-                            <button class="chat-back" id="chatBack" type="button"
-                                aria-label="Voltar para amigos">‹</button>
-                            <div class="avatar" id="chatAvatar">--</div><strong id="chatName">Selecione um
-                                amigo</strong>
-                        </div>
-                        <div class="messages" id="messages"></div>
-                        <form class="message-form" id="messageForm"><input id="messageInput"
-                                placeholder="Escreva uma mensagem..." autocomplete="off"><button class="send"
-                                type="submit">Enviar</button></form>
-                    </div>
-                </aside>
             </div>
-        </main>
-        <button class="mobile-floating-publish" id="mobilePublish" type="button" aria-label="Publicar">
-            <strong>+</strong><span>Publicar</span>
-        </button>
-        <nav class="mobile-nav" aria-label="Navegação mobile">
-            <button class="active" data-mobile-view="inicio"><svg viewBox="0 0 24 24">
-                    <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" />
-                    <path d="M9 21v-7h6v7" />
-                </svg><span>Início</span></button>
-            <button data-mobile-view="mapa"><svg viewBox="0 0 24 24">
-                    <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
-                    <circle cx="12" cy="10" r="2.5" />
-                </svg><span>Mapa</span></button>
-            <button data-mobile-view="chat" id="mobileChat"><svg viewBox="0 0 24 24">
-                    <path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.9 8.9 0 0 1-3.4-.7L3 20l1-4.6a8.4 8.4 0 1 1 17-3.9Z" />
-                </svg><span>Chat</span></button>
-            <button data-mobile-view="vendas"><svg viewBox="0 0 24 24">
-                    <path d="M3 4h18l-2 8H7L5 4M7 12l-2 8h14l-2-8M9 16h6" />
-                </svg><span>Vendas</span></button>
-            <button data-mobile-view="historico"><svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M12 7v5l3 2" />
-                </svg><span>Histórico</span></button>
-        </nav>
+            <footer class="product-form-footer">
+                <button class="screen-action product-submit" id="submitBankTransfer" type="submit" disabled>
+                    <span class="submit-label">Guardar dados bancários</span>
+                    <span class="btn-spinner" hidden></span>
+                </button>
+            </footer>
+            </form>
+            </section>
+            </section>
+
+            <section id="pageConfiguracoes" class="page-screen" aria-labelledby="settingsTitle">
+                <div class="screen-heading">
+                    <div>
+                        <h1 id="settingsTitle">Configurações</h1>
+                        <p>Gerencie suas preferências, privacidade e a segurança da conta.</p>
+                    </div>
+                </div>
+                <div class="settings-list">
+                    <div class="settings-section-title">Aparência</div>
+                    <label class="setting-row">
+                        <div>
+                            <strong>Modo Escuro</strong>
+                            <p>Alternar entre o tema claro e o tema escuro na plataforma.</p>
+                        </div>
+                        <span class="switch">
+                            <input type="checkbox" id="themeSwitch">
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+
+                    <div class="settings-section-title">Notificações</div>
+                    <label class="setting-row">
+                        <div>
+                            <strong>Notificações de pedidos</strong>
+                            <p>Receba alertas sobre novos pedidos.</p>
+                        </div>
+                        <span class="switch">
+                            <input type="checkbox" data-setting="orderNotifications" checked>
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+                    <label class="setting-row">
+                        <div>
+                            <strong>Notificações de mensagens</strong>
+                            <p>Seja avisado quando receber uma mensagem.</p>
+                        </div>
+                        <span class="switch">
+                            <input type="checkbox" data-setting="messageNotifications" checked>
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+
+                    <div class="settings-section-title">Privacidade</div>
+                    <label class="setting-row">
+                        <div>
+                            <strong>Perfil público</strong>
+                            <p>Qualquer pessoa pode ver o seu perfil</p>
+                        </div>
+                        <span class="switch">
+                            <input type="checkbox" data-setting="publicProfile" checked>
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+                    <label class="setting-row">
+                        <div>
+                            <strong>Aparecer no mapa</strong>
+                            <p>Mostrar a sua localização aproximada</p>
+                        </div>
+                        <span class="switch">
+                            <input type="checkbox" data-setting="showOnMap" checked>
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+                    <label class="setting-row">
+                        <div>
+                            <strong>Mostrar disponibilidade online</strong>
+                            <p>Seus contatos poderão ver quando você estiver online.</p>
+                        </div>
+                        <span class="switch">
+                            <input type="checkbox" data-setting="showOnline" checked>
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+                </div>
+                <div class="settings-actions">
+                    <button class="screen-action" id="saveSettings" type="button">Guardar
+                        preferências</button>
+                    <span id="settingsFeedback" role="status" aria-live="polite"></span>
+                </div>
+                <div class="page-footer-spacer" aria-hidden="true"></div>
+            </section>
+
+            <section id="pagePerfil" class="page-screen" aria-labelledby="profileTitle">
+                <div class="screen-heading">
+                    <div>
+                        <h1 id="profileTitle">Meu perfil</h1>
+                        <p>Informações da sua conta Dimma.</p>
+                    </div>
+                </div>
+                <div class="profile-summary">
+                    <div class="avatar" id="profileAvatar">UD</div>
+                    <div><strong id="profileName">Utilizador Dimma</strong>
+                        <p id="profileType">Membro Dimma</p>
+                        <button class="profile-photo-btn" id="btnFotoPerfil" type="button">Alterar foto de
+                            perfil</button>
+                        <input type="file" id="profilePhotoInput" accept="image/*" hidden>
+                    </div>
+                </div>
+                <div class="form-field"><label for="profileNameInput">Nome</label><input id="profileNameInput"
+                        type="text" placeholder="Seu nome"></div>
+                <div class="form-field"><label for="profileEmailInput">Email ou telefone</label><input
+                        id="profileEmailInput" type="text" readonly></div>
+                <div class="form-field" id="profileCompanyField" style="display: none;"><label
+                        for="profileCompanyInput">Empresa / Negócio</label><input id="profileCompanyInput" type="text"
+                        readonly></div>
+                <div class="form-field" id="profileBioField" style="display: none;"><label for="profileBioInput">Sobre o
+                        negócio</label><textarea id="profileBioInput" rows="3" readonly
+                        style="width:100%;border-radius:10px;border:1px solid var(--line);padding:10px;font-family:inherit;resize:none;background:#fdfcfb;color:inherit;"></textarea>
+                </div>
+                <div class="profile-actions">
+                    <button class="screen-action" id="saveProfile" type="button">Guardar perfil</button>
+                    <button class="screen-action secondary-action" id="profileSettings" type="button">Abrir
+                        configurações</button>
+                </div>
+                <div class="page-footer-spacer" aria-hidden="true"></div>
+            </section>
+
+
+            <aside class="chat-panel">
+                <button class="mobile-chat-close" id="mobileChatClose" type="button" aria-label="Fechar chat"><svg
+                        viewBox="0 0 24 24">
+                        <path d="m15 18-6-6 6-6" />
+                        <path d="M9 12h11" />
+                    </svg></button>
+                <div class="friends-view" id="friendsView">
+                    <div class="chat-header">
+                        <h2>Seus amigos</h2>
+                        <p>Converse com quem está online</p>
+                    </div>
+                    <input class="friend-search" id="friendSearch" placeholder="Buscar amigo..."
+                        aria-label="Buscar amigo">
+                    <div class="friends" id="friends"></div>
+                </div>
+                <div class="conversation" id="conversation">
+                    <div class="conversation-title">
+                        <button class="chat-back" id="chatBack" type="button" aria-label="Voltar para amigos">‹</button>
+                        <div class="avatar" id="chatAvatar">--</div><strong id="chatName">Selecione um
+                            amigo</strong>
+                        <div class="conversation-actions">
+                            <button class="call-btn" id="callButton" type="button" aria-label="Chamar" title="Chamar">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path
+                                        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
+                                    </path>
+                                </svg>
+                            </button>
+                            <button class="share-location" id="shareLocation" type="button"
+                                aria-label="Partilhar localização" title="Partilhar localização" aria-pressed="false">
+                                <svg class="share-location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"></path>
+                                    <circle cx="12" cy="10" r="2.5"></circle>
+                                </svg>
+                            </button>
+                            <button class="confirm-sale-btn" id="confirmSaleButton" type="button"
+                                aria-label="Confirmar venda">
+                                Confirmar venda
+                            </button>
+                            <div class="chat-menu-wrap">
+                                <button class="menu-dots" id="chatMenu" type="button" aria-label="Mais opções"
+                                    aria-haspopup="true" aria-expanded="false">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                        <circle cx="5" cy="12" r="1.8"></circle>
+                                        <circle cx="12" cy="12" r="1.8"></circle>
+                                        <circle cx="19" cy="12" r="1.8"></circle>
+                                    </svg>
+                                </button>
+                                <div class="chat-menu" id="chatMenuList" role="menu">
+                                    <button type="button" role="menuitem" data-acao="excluir">Excluir amigo</button>
+                                    <button type="button" role="menuitem" data-acao="limpar">Limpar
+                                        conversas</button>
+                                    <button type="button" role="menuitem" data-acao="denunciar">Denunciar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="messages" id="messages"></div>
+                    <form class="message-form" id="messageForm"><input id="messageInput"
+                            placeholder="Escreva uma mensagem..." autocomplete="off"><button class="send"
+                            type="submit">Enviar</button></form>
+                </div>
+            </aside>
+    </div>
+    </main>
+    <button class="mobile-floating-publish" id="mobilePublish" type="button" aria-label="Publicar">
+        <strong>+</strong><span>Publicar</span>
+    </button>
+    <nav class="mobile-nav" aria-label="Navegação mobile">
+        <button class="active" data-mobile-view="inicio"><svg viewBox="0 0 24 24">
+                <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" />
+                <path d="M9 21v-7h6v7" />
+            </svg><span>Início</span><span class="nav-badge" data-badge="inicio"></span></button>
+        <button data-mobile-view="mapa"><svg viewBox="0 0 24 24">
+                <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+                <circle cx="12" cy="10" r="2.5" />
+            </svg><span>Mapa</span></button>
+        <button data-mobile-view="chat" id="mobileChat"><svg viewBox="0 0 24 24">
+                <path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.9 8.9 0 0 1-3.4-.7L3 20l1-4.6a8.4 8.4 0 1 1 17-3.9Z" />
+            </svg><span>Chat</span><span class="nav-badge" data-badge="chat"></span></button>
+        <button data-mobile-view="vendas"><svg viewBox="0 0 24 24">
+                <path d="M3 4h18l-2 8H7L5 4M7 12l-2 8h14l-2-8M9 16h6" />
+            </svg><span>Vendas</span><span class="nav-badge" data-badge="vendas"></span></button>
+        <button data-mobile-view="historico"><svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+            </svg><span>Histórico</span></button>
+    </nav>
     </div>
     <div class="publish-modal" id="publishModal" aria-hidden="true">
         <section class="publish-dialog" role="dialog" aria-modal="true" aria-labelledby="publishTitle">
@@ -549,72 +730,6 @@
         </section>
     </div>
 
-    <div class="publish-modal" id="buyModal" aria-hidden="true">
-        <section class="publish-dialog" role="dialog" aria-modal="true" aria-labelledby="buyModalTitle"
-            style="max-width: 480px">
-            <header class="publish-dialog-header">
-                <h2 id="buyModalTitle">Comprar produto</h2>
-                <button class="modal-close" id="closeBuyModal" type="button" aria-label="Fechar compra"><svg
-                        viewBox="0 0 24 24">
-                        <path d="m18 6-12 12M6 6l12 12" />
-                    </svg></button>
-            </header>
-            <form class="product-form" id="buyForm">
-                <div class="buy-summary-box">
-                    <div class="buy-product-title" id="buyProductTitle">Nome do produto</div>
-                    <div class="buy-seller-info">Vendedor: <strong id="buySellerName">Vendedor</strong></div>
-                    <div class="buy-price-row">
-                        <span>Preço unitário:</span>
-                        <strong id="buyProductPrice">Kz 0</strong>
-                    </div>
-                </div>
-
-                <div class="form-field">
-                    <label for="buyDeliveryZone">Zona de entrega</label>
-                    <select id="buyDeliveryZone" required>
-                        <option value="municipality">Dentro do município</option>
-                        <option value="outsideMunicipality">Fora do município</option>
-                        <option value="outsideLuanda">Fora de Luanda</option>
-                    </select>
-                </div>
-
-                <div class="form-field">
-                    <label for="buyCustomerName">Seu nome completo</label>
-                    <input id="buyCustomerName" type="text" placeholder="Ex.: Manuel António" required>
-                </div>
-
-                <div class="form-field">
-                    <label for="buyCustomerPhone">Telefone ou WhatsApp</label>
-                    <input id="buyCustomerPhone" type="tel" placeholder="Ex.: 923 000 000" required>
-                </div>
-
-                <div class="form-field">
-                    <label for="buyDeliveryAddress">Endereço de entrega</label>
-                    <textarea id="buyDeliveryAddress" placeholder="Bairro, rua, ponto de referência..." rows="2"
-                        required></textarea>
-                </div>
-
-                <div class="buy-total-box">
-                    <div>
-                        <span>Taxa de entrega: <strong id="buyDeliveryRate">Kz 0</strong></span>
-                    </div>
-                    <div class="buy-grand-total">
-                        <span>Total a pagar:</span>
-                        <strong id="buyGrandTotal">Kz 0</strong>
-                    </div>
-                </div>
-
-                <p class="publish-feedback" id="buyFeedback" role="status" aria-live="polite"></p>
-
-                <footer class="product-form-footer">
-                    <button class="product-cancel" id="cancelBuyModal" type="button">Cancelar</button>
-                    <button class="screen-action product-submit" id="confirmBuyButton" type="submit">Confirmar
-                        Compra</button>
-                </footer>
-            </form>
-        </section>
-    </div>
-
     <!-- Modal para Adicionar Novo Amigo via Chat / Botão Mobile -->
     <div class="publish-modal" id="addFriendModal" aria-hidden="true">
         <section class="publish-dialog" role="dialog" aria-modal="true" aria-labelledby="addFriendModalTitle"
@@ -636,9 +751,9 @@
                     </svg>
                 </button>
             </header>
-            <div style="padding: 16px 20px 8px;">
-                <div class="chat-search" style="margin: 0; width: 100%;">
-                    <svg viewBox="0 0 24 24">
+            <div class="add-friend-search-wrap">
+                <div class="chat-search add-friend-search">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
                         <circle cx="11" cy="11" r="7" />
                         <path d="m20 20-3.5-3.5" />
                     </svg>
@@ -646,15 +761,14 @@
                         placeholder="Pesquisar por nome de utilizador ou empresa..." autocomplete="off">
                 </div>
             </div>
-            <div id="addFriendList"
-                style="max-height: 380px; overflow-y: auto; padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 10px;">
+            <div id="addFriendList" class="add-friend-list">
                 <!-- Resultados de amigos e empresas -->
             </div>
         </section>
     </div>
 
     <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
-    <script src="src/js/app.js"></script>
+    <script src="src/js/app.js?v=post-actions-2"></script>
 </body>
 
 </html>

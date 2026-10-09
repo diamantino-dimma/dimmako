@@ -176,6 +176,21 @@
  }
 
  /* ===================== TOAST NOTIFICATIONS ===================== */
+ .provider-account-notice {
+     background: rgba(222, 103, 6, .1);
+     border-left: 3px solid #de6706;
+     border-radius: 6px;
+     color: #5f5148;
+     font-size: 14px;
+     line-height: 1.5;
+     margin: 0 0 14px;
+     padding: 10px 12px
+ }
+
+ .provider-account-notice[hidden] {
+     display: none
+ }
+
  .toast-container {
      position: fixed;
      top: 20px;

@@ -4,6 +4,9 @@ const switchTypeUser = document.getElementById("switchTypeUser");
 const espacoOptionAuth = document.getElementById("espacoOptionAuth");
 let listElementNone = [espacoOptionAuth, elemento];
 let cadastroEmProcesso = false;
+let cadastroViaProvedor = false;
+let utilizadorProvedorPendente = null;
+let provedorCadastroPendente = "";
 
 // Tema escuro por padrão (sincroniza com a preferência escolhida na home)
 if (localStorage.getItem("dimmakoTema") !== "claro") document.body.classList.add("dark-theme");
@@ -488,9 +491,99 @@ async function mostrarPreview(inputId, previewId) {
     mostrarToast("Imagem selecionada. Será enviada com segurança ao concluir o cadastro.", "info");
 }
 
+function preencherValor(id, valor) {
+    const campo = document.getElementById(id);
+    if (!campo || typeof valor !== "string" || !valor.trim()) return;
+    campo.value = valor.trim();
+    campo.dataset.validationTouched = "false";
+    campo.classList.remove("is-invalid", "is-valid");
+    campo.removeAttribute("aria-invalid");
+    const mensagem = campo.parentElement?.querySelector(`[data-validation-for="${id}"]`);
+    if (mensagem) mensagem.remove();
+}
+
+function prepararFormularioDeProvedor(utilizador) {
+    const nome = sanitizarTexto(utilizador.displayName || "");
+    const enderecoEmail = sanitizarTexto(utilizador.email || "").toLowerCase();
+    preencherValor("email", enderecoEmail);
+    preencherValor("nomeCompletoVendedor", nome);
+    preencherValor("nomeCliente", nome);
+    preencherValor("emailCliente", enderecoEmail);
+    preencherValor("emailEmpresa", enderecoEmail);
+
+    const emailCliente = document.getElementById("emailCliente");
+    if (emailCliente) {
+        emailCliente.readOnly = Boolean(enderecoEmail);
+        emailCliente.setAttribute("aria-readonly", String(Boolean(enderecoEmail)));
+    }
+    const emailInicial = document.getElementById("email");
+    if (emailInicial) emailInicial.readOnly = Boolean(enderecoEmail);
+
+    const senhaIds = ["senhaVendedor", "confirmarSenhaVendedor", "senhaCliente", "confirmarSenhaCliente"];
+    senhaIds.forEach(id => {
+        const campo = document.getElementById(id);
+        if (campo) {
+            campo.required = !cadastroViaProvedor;
+            campo.hidden = cadastroViaProvedor;
+        }
+    });
+    ["req_senhaVendedor", "req_senhaCliente"].forEach(id => {
+        const requisitos = document.getElementById(id);
+        if (requisitos) requisitos.hidden = cadastroViaProvedor;
+    });
+    const aviso = document.getElementById("providerAccountNotice");
+    if (aviso) aviso.hidden = !cadastroViaProvedor;
+    const botaoVendedor = document.getElementById("completeSellerRegistration");
+    const botaoCliente = document.getElementById("completeCustomerRegistration");
+    if (botaoVendedor) botaoVendedor.textContent = cadastroViaProvedor ? "Confirmar dados e criar conta" : "Concluir cadastro";
+    if (botaoCliente) botaoCliente.textContent = cadastroViaProvedor ? "Confirmar dados e criar conta" : "Cadastrar";
+}
+
+function mostrarEscolhaTipoConta(utilizador, provedor) {
+    cadastroViaProvedor = true;
+    utilizadorProvedorPendente = utilizador;
+    provedorCadastroPendente = provedor || "";
+    prepararFormularioDeProvedor(utilizador);
+    document.getElementById("divLogin").style.display = "none";
+    espacoOptionAuth.style.display = "none";
+    switchTypeUser.style.display = "flex";
+    document.querySelectorAll("#switchTypeUser > div").forEach(passo => {
+        passo.style.display = passo.id === "passoCreateAccount" || passo.id === "divPasso1" ? "flex" : "none";
+    });
+    document.querySelectorAll("#passoCreateAccount > div").forEach(passo => {
+        passo.style.background = "#f2b888";
+        passo.style.color = "rgb(222, 112, 33)";
+    });
+    elemento.style.display = "none";
+}
+
+function prepararContaViaProvedor() {
+    const utilizador = utilizadorProvedorPendente || window.dimmakoFirebase?.auth.currentUser;
+    if (!utilizador) throw new Error("A sessão do provedor expirou. Entre novamente com a sua conta.");
+    if (utilizador.email) {
+        const emailConfirmado = sanitizarTexto(utilizador.email).toLowerCase();
+        const campoEmail = document.getElementById("email");
+        const campoEmailCliente = document.getElementById("emailCliente");
+        if (campoEmail && campoEmail.value.trim().toLowerCase() !== emailConfirmado) {
+            throw new Error("O email de cadastro deve corresponder ao email confirmado pelo provedor.");
+        }
+        if (campoEmailCliente && campoEmailCliente.value.trim().toLowerCase() !== emailConfirmado) {
+            throw new Error("O email do perfil deve corresponder ao email confirmado pelo provedor.");
+        }
+    }
+    return utilizador;
+}
+
+function validarCredenciaisCadastro(ids) {
+    const campos = cadastroViaProvedor
+        ? ids.filter(id => !["senhaVendedor", "confirmarSenhaVendedor", "senhaCliente", "confirmarSenhaCliente"].includes(id))
+        : ids;
+    return validarCampos(campos);
+}
+
 function avancarPasso2Vendedor() {
     const ids = ["nomeCompletoVendedor", "dia", "mes", "ano", "sexoVendedor", "biVendedor", "senhaVendedor", "confirmarSenhaVendedor"];
-    if (!validarCampos(ids)) {
+    if (!validarCredenciaisCadastro(ids)) {
         mostrarToast("Corrija os campos assinalados antes de continuar.", "erro");
         return;
     }
@@ -659,8 +752,12 @@ function limparCredenciaisLegadas() {
 async function finalizarCadastroVendedor() {
     if (cadastroEmProcesso) return;
     const ids = ["nomeCompletoVendedor", "dia", "mes", "ano", "sexoVendedor", "biVendedor", "senhaVendedor", "confirmarSenhaVendedor", "nomeEmpresa", "emailEmpresa", "telefoneEmpresa", "categoriaNegocio", "descriptionBus", "logotipoEmpresa"];
-    if (!validarCampos(ids)) {
+    if (!validarCredenciaisCadastro(ids)) {
         mostrarToast("Corrija os campos assinalados antes de concluir o cadastro.", "erro");
+        return;
+    }
+    if (cadastroViaProvedor && !validarCampos(["email"])) {
+        mostrarToast("Confirme o email recebido do provedor antes de concluir o cadastro.", "erro");
         return;
     }
     cadastroEmProcesso = true;
@@ -681,11 +778,12 @@ async function finalizarCadastroVendedor() {
     const nomeEmpresa = sanitizarTexto(document.getElementById("nomeEmpresa").value);
     const emailEmpresa = sanitizarTexto(document.getElementById("emailEmpresa").value);
     const telefoneEmpresa = sanitizarTexto(document.getElementById("telefoneEmpresa").value);
-    const emailAuth = ehEmailValido(email.value.trim()) ? email.value.trim().toLowerCase() : emailEmpresa.toLowerCase();
+    const emailAuth = cadastroViaProvedor
+        ? (utilizadorProvedorPendente || window.dimmakoFirebase?.auth.currentUser)?.email
+        : (ehEmailValido(email.value.trim()) ? email.value.trim().toLowerCase() : emailEmpresa.toLowerCase());
     const categoriaBtn = document.querySelector("#categoriasNegocio button.seleccionado");
     const categoria = categoriaBtn ? categoriaBtn.textContent.trim() : "Comércio Geral";
     const descricao = sanitizarTexto(document.getElementById("descriptionBus").value);
-    const senha = document.getElementById("senhaVendedor").value;
     const foto = window.empresaFotoBase64 || null;
 
     const conta = {
@@ -708,25 +806,31 @@ async function finalizarCadastroVendedor() {
     try {
         if (!window.dimmakoFirebase) throw new Error("Firebase não está inicializado.");
         await window.dimmakoFirebase.ready;
-        const credencial = await window.dimmakoFirebase.auth.createUserWithEmailAndPassword(emailAuth, senha);
-        try {
-            if (window.empresaFotoFicheiro) {
-                conta.foto = await uploadImagemImgBB(window.empresaFotoFicheiro);
-            }
-            await guardarContaCompleta(conta, credencial.user);
-        } catch (error) {
-            await credencial.user.delete().catch(() => { });
-            throw error;
+        const viaProvedor = cadastroViaProvedor;
+        let utilizador = null;
+        if (viaProvedor) {
+            utilizador = prepararContaViaProvedor();
+        } else {
+            const credencial = await window.dimmakoFirebase.auth.createUserWithEmailAndPassword(emailAuth, document.getElementById("senhaVendedor").value);
+            utilizador = credencial.user;
         }
+        if (window.empresaFotoFicheiro) conta.foto = await uploadImagemImgBB(window.empresaFotoFicheiro);
+        await guardarContaCompleta(conta, utilizador);
+        sessionStorage.removeItem("dimmakoProvedorAuthPendente");
+        cadastroViaProvedor = false;
+        utilizadorProvedorPendente = null;
+        provedorCadastroPendente = "";
         elemento.style.display = "none";
-        mostrarToast("Cadastro concluído com sucesso! A entrar na Dimmako...", "sucesso");
+        mostrarToast(viaProvedor
+            ? "Dados confirmados! A entrar na Dimmako..."
+            : "Cadastro concluído com sucesso! A entrar na Dimmako...", "sucesso");
         setTimeout(() => {
             window.location.href = "home.html";
         }, 1000);
     } catch (error) {
         elemento.style.display = "none";
         cadastroEmProcesso = false;
-        mostrarToast(obterErroFirebase(error), "erro", 5000);
+        mostrarToast(obterErroFirebase(error, provedorCadastroPendente), "erro", 5000);
     }
 }
 
@@ -743,13 +847,18 @@ function irParaCliente() {
 
 async function cadastrarCliente() {
     if (cadastroEmProcesso) return;
-    if (!validarCampos(["nomeCliente", "emailCliente", "senhaCliente", "confirmarSenhaCliente", "fotoPerfilCliente"])) {
+    if (!validarCredenciaisCadastro(["nomeCliente", "emailCliente", "senhaCliente", "confirmarSenhaCliente", "fotoPerfilCliente"])) {
         mostrarToast("Corrija os campos assinalados antes de concluir o cadastro.", "erro");
         return;
     }
+    if (cadastroViaProvedor && !validarCampos(["email"])) {
+        mostrarToast("Confirme o email recebido do provedor antes de concluir o cadastro.", "erro");
+        return;
+    }
     const nome = sanitizarTexto(document.getElementById("nomeCliente").value);
-    const emailCliente = sanitizarTexto(document.getElementById("emailCliente").value).toLowerCase();
-    const senha = document.getElementById("senhaCliente").value;
+    const emailCliente = cadastroViaProvedor
+        ? (utilizadorProvedorPendente || window.dimmakoFirebase?.auth.currentUser)?.email
+        : sanitizarTexto(document.getElementById("emailCliente").value).toLowerCase();
     if (!ehEmailValido(emailCliente)) {
         mostrarToast("O Firebase está configurado para email e senha. Acesso por telefone requer Phone Authentication e reCAPTCHA ativos.", "erro", 6000);
         return;
@@ -768,25 +877,34 @@ async function cadastrarCliente() {
     elemento.style.display = "flex";
     try {
         await window.dimmakoFirebase.ready;
-        const credencial = await window.dimmakoFirebase.auth.createUserWithEmailAndPassword(emailCliente, senha);
-        try {
-            if (window.clienteFotoFicheiro) {
-                conta.foto = await uploadImagemImgBB(window.clienteFotoFicheiro);
-            }
-            await guardarContaCompleta(conta, credencial.user);
-        } catch (error) {
-            await credencial.user.delete().catch(() => { });
-            throw error;
+        const viaProvedor = cadastroViaProvedor;
+        let utilizador = null;
+        if (viaProvedor) {
+            utilizador = prepararContaViaProvedor();
+        } else {
+            const credencial = await window.dimmakoFirebase.auth.createUserWithEmailAndPassword(
+                emailCliente,
+                document.getElementById("senhaCliente").value
+            );
+            utilizador = credencial.user;
         }
+        if (window.clienteFotoFicheiro) conta.foto = await uploadImagemImgBB(window.clienteFotoFicheiro);
+        await guardarContaCompleta(conta, utilizador);
+        sessionStorage.removeItem("dimmakoProvedorAuthPendente");
+        cadastroViaProvedor = false;
+        utilizadorProvedorPendente = null;
+        provedorCadastroPendente = "";
         elemento.style.display = "none";
-        mostrarToast("Cadastro de cliente concluído com sucesso! A entrar na Dimmako...", "sucesso");
+        mostrarToast(viaProvedor
+            ? "Dados confirmados! A entrar na Dimmako..."
+            : "Cadastro de cliente concluído com sucesso! A entrar na Dimmako...", "sucesso");
         setTimeout(() => {
             window.location.href = "home.html";
         }, 800);
     } catch (error) {
         elemento.style.display = "none";
         cadastroEmProcesso = false;
-        mostrarToast(obterErroFirebase(error), "erro", 5000);
+        mostrarToast(obterErroFirebase(error, provedorCadastroPendente), "erro", 5000);
     }
 }
 
@@ -807,11 +925,6 @@ async function continuarComProvedor(provedor) {
         Google: () => {
             const provider = new firebase.auth.GoogleAuthProvider();
             provider.setCustomParameters({ prompt: "select_account" });
-            return provider;
-        },
-        Facebook: () => {
-            const provider = new firebase.auth.FacebookAuthProvider();
-            provider.addScope("email");
             return provider;
         },
         Apple: () => {
@@ -838,8 +951,7 @@ async function continuarComProvedor(provedor) {
         sessionStorage.setItem("dimmakoProvedorAuthPendente", provedor);
         try {
             const resultado = await auth.signInWithPopup(provider);
-            sessionStorage.removeItem("dimmakoProvedorAuthPendente");
-            await finalizarAcessoProvedor(resultado.user);
+            await finalizarAcessoProvedor(resultado.user, provedor);
         } catch (error) {
             if (error.code === "auth/popup-blocked") {
                 await auth.signInWithRedirect(provider);
@@ -856,21 +968,22 @@ async function continuarComProvedor(provedor) {
     }
 }
 
-async function finalizarAcessoProvedor(utilizador) {
+function obterNomeProvedor(utilizador) {
+    const providerId = utilizador.providerData?.map(provider => provider.providerId)
+        .find(id => id === "google.com" || id === "apple.com");
+    return providerId === "apple.com" ? "Apple" : "Google";
+}
+
+async function finalizarAcessoProvedor(utilizador, provedor = obterNomeProvedor(utilizador)) {
     const profileRef = window.dimmakoFirebase.db.collection("profiles").doc(utilizador.uid);
     const profileSnapshot = await profileRef.get();
-    const profile = profileSnapshot.exists
-        ? profileSnapshot.data()
-        : {
-            tipo: "cliente",
-            identificador: utilizador.email || utilizador.uid,
-            email: utilizador.email || undefined,
-            nome: utilizador.displayName || "Utilizador",
-            nomeCompleto: utilizador.displayName || "Utilizador",
-            foto: null
-        };
-    await guardarContaCompleta(profile, utilizador);
-    window.location.replace("home.html");
+    if (profileSnapshot.exists) {
+        await guardarContaCompleta(profileSnapshot.data(), utilizador);
+        sessionStorage.removeItem("dimmakoProvedorAuthPendente");
+        window.location.replace("home.html");
+        return;
+    }
+    mostrarEscolhaTipoConta(utilizador, provedor);
 }
 
 function abrirLogin() {
@@ -943,12 +1056,18 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(() => window.dimmakoFirebase.auth.getRedirectResult())
             .then(resultado => {
                 if (!resultado?.user) {
-                    sessionStorage.removeItem("dimmakoProvedorAuthPendente");
+                    const provedorPendente = sessionStorage.getItem("dimmakoProvedorAuthPendente");
+                    const utilizadorAtual = window.dimmakoFirebase.auth.currentUser;
+                    if (provedorPendente && utilizadorAtual) {
+                        return finalizarAcessoProvedor(utilizadorAtual, provedorPendente);
+                    }
                     return;
                 }
-                sessionStorage.removeItem("dimmakoProvedorAuthPendente");
                 elemento.style.display = "flex";
-                return finalizarAcessoProvedor(resultado.user);
+                return finalizarAcessoProvedor(
+                    resultado.user,
+                    sessionStorage.getItem("dimmakoProvedorAuthPendente") || obterNomeProvedor(resultado.user)
+                );
             })
             .catch(error => {
                 elemento.style.display = "none";

@@ -38,12 +38,6 @@
                             d="M43.6 20.5H42V20H24v8h11.3c-.7 2-2 3.7-3.7 4.9l6.4 5.2C39.9 36.5 44 30.9 44 24c0-1.2-.1-2.3-.4-3.5z" />
                     </svg>
                 </button>
-                <button type="button" title="Continuar com Facebook" onclick="continuarComProvedor('Facebook')">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <path fill="#1877F2"
-                            d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.96h-1.51c-1.49 0-1.95.93-1.95 1.89v2.26h3.32l-.53 3.49h-2.79V24C19.61 23.09 24 18.1 24 12.07z" />
-                    </svg>
-                </button>
                 <button type="button" title="Continuar com Email" onclick="continuarComProvedor('Email')">
                     <svg viewBox="0 0 24 24" width="22" height="22">
                         <path fill="rgb(222,103,6)"
@@ -81,6 +75,9 @@
                 <div id="passo4" style="background: #f2b888; color: rgb(222, 112, 33); font-weight: bold;">4</div>
             </div>
             <div id="divPasso1">
+                <p id="providerAccountNotice" class="provider-account-notice" hidden>
+                    Encontrámos alguns dados da sua conta. Confirme e complete os dados pedidos nos próximos passos.
+                </p>
                 <h2
                     style="text-align: center; color: rgb(222, 103, 6); font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif ;">
                     Bem-vindo à Dimmako! Como pretende utilizar a plataforma?</h2>
@@ -206,7 +203,7 @@
                     <span class="labelAvatar">Adicione o logótipo da sua empresa</span>
 
                     <textarea placeholder="Fale um pouco sobre a sua empresa" id="descriptionBus"></textarea>
-                    <button type="button" onclick="finalizarCadastroVendedor()">Concluir cadastro</button>
+                    <button type="button" id="completeSellerRegistration" onclick="finalizarCadastroVendedor()">Concluir cadastro</button>
 
                 </form>
 
@@ -270,7 +267,7 @@
                         </span>
                     </div>
                     <input type="password" id="confirmarSenhaCliente" placeholder="Confirmar senha">
-                    <button type="button" onclick="cadastrarCliente()">Cadastrar</button>
+                    <button type="button" id="completeCustomerRegistration" onclick="cadastrarCliente()">Cadastrar</button>
                 </form>
             </div>
 
@@ -291,12 +288,6 @@
                                 d="M24 44c5.3 0 10.2-2 13.8-5.4l-6.4-5.2C29.3 35.1 26.8 36 24 36c-5.3 0-9.8-3.4-11.4-8.1l-6.5 5C9.1 39.6 16 44 24 44z" />
                             <path fill="#1976D2"
                                 d="M43.6 20.5H42V20H24v8h11.3c-.7 2-2 3.7-3.7 4.9l6.4 5.2C39.9 36.5 44 30.9 44 24c0-1.2-.1-2.3-.4-3.5z" />
-                        </svg>
-                    </button>
-                    <button type="button" title="Continuar com Facebook" onclick="continuarComProvedor('Facebook')">
-                        <svg viewBox="0 0 24 24" width="24" height="24">
-                            <path fill="#1877F2"
-                                d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.96h-1.51c-1.49 0-1.95.93-1.95 1.89v2.26h3.32l-.53 3.49h-2.79V24C19.61 23.09 24 18.1 24 12.07z" />
                         </svg>
                     </button>
                     <button type="button" title="Continuar com Email" onclick="continuarComProvedor('Email')">

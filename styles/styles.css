@@ -289,32 +289,34 @@
      height: auto;
      display: flex;
      align-items: center;
-     justify-content: space-between;
+     justify-content: center;
      flex-direction: row;
      gap: 10px;
  }
 
  .spacesCardsBtnsServices button {
-     width: 52px;
-     height: 52px;
-     border-radius: 100px;
+     width: 100%;
+     height: var(--control-h);
+     border-radius: var(--control-radius);
      border: none;
      outline: none;
      background: #fff;
      box-shadow: 0 0 0 1px rgba(222, 103, 6, 0.295) inset;
-     font-weight: bold;
+     font-weight: 700;
      color: rgb(222, 103, 6);
-     font-size: 18px;
-     font-family: 'Bauhaus 93';
+     font-size: 14px;
+     font-family: "Segoe UI", Arial, sans-serif;
      display: flex;
      align-items: center;
      justify-content: center;
+     gap: 12px;
      cursor: pointer;
  }
 
  .spacesCardsBtnsServices button svg {
      width: 24px;
      height: 24px;
+     flex: 0 0 24px;
  }
 
  .spacesCardsBtnsServices button:hover {

@@ -12,17 +12,32 @@ function readEnvironmentValue(...names) {
     return "";
 }
 
+let localConfig = {};
+const localConfigPath = path.join(root, "src", "js", "firebase-config.js");
+if (fs.existsSync(localConfigPath)) {
+    try {
+        const fileContent = fs.readFileSync(localConfigPath, "utf8");
+        const match = fileContent.match(/Object\.freeze\((\{[\s\S]*?\})\)/);
+        if (match && match[1]) {
+            localConfig = (new Function(`return ${match[1]};`))();
+        }
+    } catch (e) {
+        // Ignora erro de parsing do fallback local
+    }
+}
+
 const configuration = {
-    apiKey: readEnvironmentValue("DIMMAKO_FIREBASE_API_KEY"),
-    authDomain: readEnvironmentValue("DIMMAKO_FIREBASE_AUTH_DOMAIN"),
-    projectId: readEnvironmentValue("DIMMAKO_FIREBASE_PROJECT_ID", "ID_DO_PROJETO_FIREBASE_DIMMAKO"),
-    storageBucket: readEnvironmentValue("DIMMAKO_FIREBASE_STORAGE_BUCKET"),
-    messagingSenderId: readEnvironmentValue("DIMMAKO_FIREBASE_MESSAGING_SENDER_ID"),
-    appId: readEnvironmentValue("DIMMAKO_FIREBASE_APP_ID", "ID_DO_APLICATIVO_FIREBASE_DIMMAKO"),
-    measurementId: readEnvironmentValue("DIMMAKO_FIREBASE_MEASUREMENT_ID"),
-    appCheckSiteKey: readEnvironmentValue("DIMMAKO_FIREBASE_APPCHECK_SITE_KEY"),
-    arcgisApiKey: readEnvironmentValue("DIMMAKO_ARCGIS_API_KEY"),
-    imgbbApiKey: readEnvironmentValue("DIMMAKO_IMGBB_API_KEY")
+    apiKey: readEnvironmentValue("DIMMAKO_FIREBASE_API_KEY") || localConfig.apiKey || "",
+    authDomain: readEnvironmentValue("DIMMAKO_FIREBASE_AUTH_DOMAIN") || localConfig.authDomain || "",
+    databaseURL: readEnvironmentValue("DIMMAKO_FIREBASE_DATABASE_URL") || localConfig.databaseURL || "",
+    projectId: readEnvironmentValue("DIMMAKO_FIREBASE_PROJECT_ID", "ID_DO_PROJETO_FIREBASE_DIMMAKO") || localConfig.projectId || "",
+    storageBucket: readEnvironmentValue("DIMMAKO_FIREBASE_STORAGE_BUCKET") || localConfig.storageBucket || "",
+    messagingSenderId: readEnvironmentValue("DIMMAKO_FIREBASE_MESSAGING_SENDER_ID") || localConfig.messagingSenderId || "",
+    appId: readEnvironmentValue("DIMMAKO_FIREBASE_APP_ID", "ID_DO_APLICATIVO_FIREBASE_DIMMAKO") || localConfig.appId || "",
+    measurementId: readEnvironmentValue("DIMMAKO_FIREBASE_MEASUREMENT_ID") || localConfig.measurementId || "",
+    appCheckSiteKey: readEnvironmentValue("DIMMAKO_FIREBASE_APPCHECK_SITE_KEY") || localConfig.appCheckSiteKey || "",
+    arcgisApiKey: readEnvironmentValue("DIMMAKO_ARCGIS_API_KEY") || localConfig.arcgisApiKey || "",
+    imgbbApiKey: readEnvironmentValue("DIMMAKO_IMGBB_API_KEY") || localConfig.imgbbApiKey || ""
 };
 
 const requiredVariables = [
@@ -33,7 +48,7 @@ const requiredVariables = [
     ["imgbbApiKey", "DIMMAKO_IMGBB_API_KEY"]
 ];
 const missingVariables = requiredVariables
-    .filter(([key]) => !configuration[key].trim())
+    .filter(([key]) => !configuration[key]?.trim())
     .map(([key, variable]) => {
         if (key === "projectId") return `${variable} (or ID_DO_PROJETO_FIREBASE_DIMMAKO)`;
         if (key === "appId") return `${variable} (or ID_DO_APLICATIVO_FIREBASE_DIMMAKO)`;

@@ -386,12 +386,18 @@ button {
     font-size: 12px
 }
 
-.post,
 .chat-panel {
     background: var(--white);
     border: 1px solid var(--line);
     border-radius: 14px;
     box-shadow: var(--shadow)
+}
+
+.post {
+    background: transparent !important;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: none;
 }
 
 .filter-carousel {
@@ -513,20 +519,29 @@ button {
 }
 
 #posts {
-    column-count: 2;
-    column-gap: 14px
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
 }
 
 #posts .post {
-    break-inside: avoid;
-    display: inline-block;
-    margin: 0 0 14px;
-    width: 100%
+    display: block;
+    margin: 0;
+    width: 100%;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none;
+    border: 1px solid var(--line);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 .post {
-    margin-top: 14px;
-    padding: 17px
+    margin-top: 0;
+    padding: 18px;
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 .post-head {
@@ -3961,7 +3976,6 @@ body.dark-theme .main,
 body.dark-theme .header,
 body.dark-theme .chat-panel,
 body.dark-theme .mobile-nav,
-body.dark-theme .post,
 body.dark-theme .summary-card,
 body.dark-theme .chart-card,
 body.dark-theme .sales-orders-card,
@@ -4400,7 +4414,6 @@ body.dark-theme {
 .empty,
 .chat-panel,
 .mobile-nav,
-.post,
 .publish-dialog,
 .sales-stat,
 .chart-section,
